@@ -1,0 +1,12 @@
+{
+  "name": "מאגר הייעוץ",
+  "short_name": "ייעוץ",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#071b1b",
+  "theme_color": "#0b6b61",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [{"src":"favicon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
+

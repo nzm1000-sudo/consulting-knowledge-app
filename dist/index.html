@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b6b61">
+  <meta name="description" content="מאגר ידע אישי לפגישות, עקרונות ומעקבים">
+  <title>מאגר הייעוץ</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" aria-label="ניווט ראשי">
+      <div class="brand"><span class="brand-mark">מ</span><span><strong>מאגר הייעוץ</strong><small>הידע המקצועי שלך</small></span></div>
+      <nav id="desktop-nav"></nav>
+      <div class="privacy-note"><span>●</span><div><strong>נשמר במכשיר</strong><small>אב־טיפוס מקומי ופרטי</small></div></div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div><p id="eyebrow">יום שישי, 11 בספטמבר</p><h1 id="page-title">בוקר טוב</h1></div>
+        <button class="icon-btn" id="new-transcript" aria-label="ייבוא תמלול חדש">＋</button>
+      </header>
+      <div id="view" class="view" aria-live="polite"></div>
+    </main>
+
+    <nav class="mobile-nav" id="mobile-nav" aria-label="ניווט באייפון"></nav>
+  </div>
+
+  <dialog id="import-dialog">
+    <form method="dialog" id="import-form">
+      <div class="dialog-head"><div><small>PLAUD IMPORT</small><h2>תמלול חדש</h2></div><button value="cancel" class="close" aria-label="סגירה">×</button></div>
+      <label>שם הפגישה<input name="title" required placeholder="למשל: פגישה עם משפחת לוי"></label>
+      <div class="split-fields"><label>שם האדם<input name="person" required placeholder="שם או כינוי"></label><label>תאריך<input name="date" type="date" required></label></div>
+      <label>הדבקת תמלול<textarea name="transcript" required rows="9" placeholder="הדבק כאן את התמלול מ־PLAUD…"></textarea></label>
+      <label class="file-label">או בחר קובץ TXT<input id="file-input" type="file" accept=".txt,text/plain"></label>
+      <p class="hint">בגרסה זו הניתוח מתבצע מקומית. התמלול אינו נשלח לשירות חיצוני.</p>
+      <div class="dialog-actions"><button value="cancel" class="button ghost">ביטול</button><button value="default" class="button primary" id="analyze-btn">ניתוח ושמירה</button></div>
+    </form>
+  </dialog>
+
+  <div id="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>
+
