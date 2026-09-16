@@ -3,46 +3,103 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#0b6b61">
-  <meta name="description" content="מאגר ידע אישי לפגישות, עקרונות ומעקבים">
+  <meta name="theme-color" content="#F4F2EC">
+  <meta name="description" content="מאגר ידע אישי לפגישות ייעוץ: תמלולים, אנשים, עקרונות ומעקבים">
   <title>מאגר הייעוץ</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700;900&family=Heebo:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <a class="skip-link" href="#view">דילוג לתוכן</a>
+
   <div class="shell">
     <aside class="sidebar" aria-label="ניווט ראשי">
-      <div class="brand"><span class="brand-mark">מ</span><span><strong>מאגר הייעוץ</strong><small>הידע המקצועי שלך</small></span></div>
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 64 64" width="30" height="30"><path d="M18 19h28v23H31l-9 7v-7h-4z" fill="currentColor"/><path d="M25 27h14M25 33h10" stroke="#F4F2EC" stroke-width="3" stroke-linecap="round"/></svg>
+        </span>
+        <span class="brand-text"><strong>מאגר הייעוץ</strong><small>הזיכרון המקצועי שלך</small></span>
+      </div>
+
       <nav id="desktop-nav"></nav>
-      <div class="privacy-note"><span>●</span><div><strong>נשמר במכשיר</strong><small>אב־טיפוס מקומי ופרטי</small></div></div>
+
+      <div class="sidebar-foot">
+        <button id="theme-toggle" class="ghost-btn" type="button" aria-label="החלפת מצב צבעים">
+          <span class="theme-ic theme-ic-light" aria-hidden="true">☾</span>
+          <span class="theme-ic theme-ic-dark" aria-hidden="true">☀</span>
+          <span class="theme-label">מצב כהה</span>
+        </button>
+        <div class="privacy-note">
+          <span class="privacy-dot" aria-hidden="true"></span>
+          <div><strong>נשמר במכשיר</strong><small>אב־טיפוס מקומי ופרטי</small></div>
+        </div>
+      </div>
     </aside>
 
     <main>
       <header class="topbar">
-        <div><p id="eyebrow">יום שישי, 11 בספטמבר</p><h1 id="page-title">בוקר טוב</h1></div>
-        <button class="icon-btn" id="new-transcript" aria-label="ייבוא תמלול חדש">＋</button>
+        <div class="topbar-id">
+          <p id="eyebrow" aria-hidden="true"></p>
+          <h1 id="page-title"></h1>
+        </div>
+        <div class="topbar-actions">
+          <button id="global-search-btn" class="search-field" type="button" aria-label="חיפוש בכל הידע">
+            <svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M13.2 13.2 17 17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            <span class="sf-label">חיפוש בכל הידע</span>
+            <kbd class="sf-kbd" aria-hidden="true">⌘K</kbd>
+          </button>
+          <button class="icon-btn primary" id="new-transcript" type="button" aria-label="ייבוא תמלול חדש" title="ייבוא תמלול חדש">
+            <svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+        </div>
       </header>
-      <div id="view" class="view" aria-live="polite"></div>
+
+      <div id="view" class="view"></div>
     </main>
 
-    <nav class="mobile-nav" id="mobile-nav" aria-label="ניווט באייפון"></nav>
+    <nav class="mobile-nav" id="mobile-nav" aria-label="ניווט נייד"></nav>
   </div>
 
-  <dialog id="import-dialog">
-    <form method="dialog" id="import-form">
-      <div class="dialog-head"><div><small>PLAUD IMPORT</small><h2>תמלול חדש</h2></div><button value="cancel" class="close" aria-label="סגירה">×</button></div>
-      <label>שם הפגישה<input name="title" required placeholder="למשל: פגישה עם משפחת לוי"></label>
-      <div class="split-fields"><label>שם האדם<input name="person" required placeholder="שם או כינוי"></label><label>תאריך<input name="date" type="date" required></label></div>
-      <label>הדבקת תמלול<textarea name="transcript" required rows="9" placeholder="הדבק כאן את התמלול מ־PLAUD…"></textarea></label>
-      <label class="file-label">או בחר קובץ TXT<input id="file-input" type="file" accept=".txt,text/plain"></label>
-      <p class="hint">בגרסה זו הניתוח מתבצע מקומית. התמלול אינו נשלח לשירות חיצוני.</p>
-      <div class="dialog-actions"><button value="cancel" class="button ghost">ביטול</button><button value="default" class="button primary" id="analyze-btn">ניתוח ושמירה</button></div>
+  <dialog id="search-dialog" class="palette" aria-label="חיפוש מהיר">
+    <form id="palette-form">
+      <div class="palette-head">
+        <svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M13.2 13.2 17 17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <input id="palette-input" name="q" type="text" placeholder="שאלה חופשית בעברית…" autocomplete="off" aria-label="שאלה לחיפוש">
+        <kbd class="sf-kbd" aria-hidden="true">esc</kbd>
+      </div>
+      <div id="palette-results" class="palette-results" role="listbox" aria-label="תוצאות"></div>
+      <div class="palette-foot">
+        <span><kbd>↑</kbd><kbd>↓</kbd> ניווט</span><span><kbd>enter</kbd> פתיחה</span><span class="pf-privacy">נשמר במכשיר</span>
+      </div>
     </form>
   </dialog>
 
-  <div id="toast" role="status"></div>
+  <dialog id="import-dialog" aria-label="ייבוא תמלול חדש">
+    <form method="dialog" id="import-form">
+      <div class="dialog-head">
+        <div><small>PLAUD IMPORT</small><h2>תמלול חדש</h2></div>
+        <button value="cancel" class="close" aria-label="סגירה">×</button>
+      </div>
+      <label>שם הפגישה<input name="title" required placeholder="למשל: פגישה עם משפחת לוי"></label>
+      <div class="split-fields">
+        <label>שם האדם<input name="person" required placeholder="שם או כינוי"></label>
+        <label>תאריך<input name="date" type="date" required></label>
+      </div>
+      <label>הדבקת תמלול<textarea name="transcript" required rows="9" placeholder="הדבק כאן את התמלול מ־PLAUD…"></textarea></label>
+      <label class="file-label">או בחר קובץ TXT<input id="file-input" type="file" accept=".txt,text/plain"></label>
+      <p class="hint">בגרסה זו הניתוח מתבצע מקומית — זיהוי בעיות, עצות, נימוקים ומעקבים. התמלול אינו נשלח לשירות חיצוני.</p>
+      <div class="dialog-actions">
+        <button value="cancel" class="button ghost" type="submit">ביטול</button>
+        <button value="default" class="button primary" id="analyze-btn" type="submit"><span class="btn-label">ניתוח ושמירה</span></button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" role="status" aria-live="polite"></div>
   <script src="app.js"></script>
 </body>
 </html>
-

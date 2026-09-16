@@ -1,12 +1,12 @@
 {
   "name": "מאגר הייעוץ",
   "short_name": "ייעוץ",
+  "description": "הזיכרון המקצועי של היועץ: פגישות, אנשים, עקרונות ומעקבים",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#071b1b",
-  "theme_color": "#0b6b61",
+  "background_color": "#F4F2EC",
+  "theme_color": "#0E5E56",
   "lang": "he",
   "dir": "rtl",
   "icons": [{"src":"favicon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
 }
-
