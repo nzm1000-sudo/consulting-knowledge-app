@@ -52,7 +52,8 @@ const sandbox={
   crypto:{randomUUID:()=>'uuid-test-'+Math.random().toString(36).slice(2)},
   matchMedia:windowStub.matchMedia,
   console,
-  setTimeout,clearTimeout,
+  setTimeout,clearTimeout,setInterval:()=>0,
+  sessionStorage:localStorageStub,
   Intl,URL,Promise,
   structuredClone,
 };
@@ -66,83 +67,104 @@ assert(app,'__consulting hook missing');
 const data=app.data;
 
 // 1. seed intact
-assert.equal(data.meetings.length,3,'seed meetings');
+assert.equal(data.meetings.length,4,'seed meetings');
 assert.equal(data.people.length,3,'seed people');
 assert.equal(data.principles.length,3,'seed principles');
-assert.equal(data.followups.length,3,'seed followups');
+assert.equal(data.followups.length,4,'seed followups');
 assert.equal(data.meetings[0].id,'m1');
-assert.equal(data.followups[0].id,'f1');
 
-// 2. analysis applied to all seed meetings
-for(const m of data.meetings)assert(m.analysis&&m.analysis.segments.length>0,'analysis for '+m.id);
-const a1=data.meetings[0].analysis;
+// 2. analysis (v3) applied to all meetings, with evidence integrity
+for(const m of data.meetings)assert(m.analysis&&m.analysis.version===3&&m.analysis.segments.length>0,'analysis for '+m.id);
+const byId=id=>data.meetings.find(m=>m.id===id).analysis;
+const a1=byId('m1');
 assert(a1.problem&&a1.problem.text.includes('הקושי'),'m1 problem');
-assert(a1.advice.length>=1&&a1.advice[0].text.includes('המלצתי'),'m1 advice');
-assert.equal(a1.summary,'המלצתי שהבעל והאישה ינסחו יחד גבול אחיד ויציגו אותו כעמדה משותפת.','m1 summary = advice sentence (old behavior)');
-const a2=data.meetings[1].analysis;
+assert(a1.advice[0].text.includes('המלצתי'),'m1 advice');
+const a2=byId('m2');
+assert(a2.problem&&a2.problem.text.includes('ויכוחים'),'m2 problem detected (was missed in v2)');
 assert(a2.followups.length===1&&a2.followups[0].text.includes('בפגישה הבאה'),'m2 followup');
-const a3=data.meetings[2].analysis;
-assert(a3.advice.length===1&&a3.advice[0].type==='decision','m3 decision as advice');
-// evidence integrity: every item maps to a real segment
+assert(byId('m3').advice[0].type==='decision','m3 decision');
+const a4=byId('m4');
+assert.equal(a4.speakers.join(','),'היועץ,דניאל','m4 speakers');
+assert(a4.results.some(r=>r.text.includes('עבד בשתי')),'m4 result of earlier advice');
+assert(!a4.results.some(r=>r.text.endsWith('?')),'questions are not results');
+assert(a4.outcomes.some(o=>o.text.includes('המטרה')),'m4 intended outcome (regex fixed)');
+assert(a4.contradictions.length===1,'m4 exception');
+assert(a4.reasoning.some(r=>r.forAdvice&&r.text.startsWith('כי')),'m4 reasoning clause linked to advice');
+assert.equal(a4.timeRange,'00:01–02:10');
 for(const m of data.meetings){
-  for(const k of ['problem','observations','reasoning','advice','outcomes','followups','contradictions']){
-    const arr=k==='problem'?(m.analysis.problem?[m.analysis.problem]:[]):m.analysis[k];
-    for(const it of arr){
-      assert.equal(m.analysis.segments[it.evidence.seg].text,it.evidence.quote,'evidence quote matches segment '+m.id+'/'+it.evidence.seg);
+  const an=m.analysis;
+  for(const k of ['observations','reasoning','advice','outcomes','results','followups','contradictions']){
+    for(const it of an[k].concat(k==='observations'&&an.problem?[an.problem]:[])){
+      assert.equal(an.segments[it.evidence.seg].text,it.evidence.quote,'evidence quote matches segment '+m.id+'/'+it.evidence.seg);
       assert(['explicit','inferred'].includes(it.kind),'kind');
-      assert(it.confidence>0&&it.confidence<=90,'confidence bounded (heuristic honesty): '+it.confidence);
+      assert(it.confidence>0&&it.confidence<=90,'confidence bounded: '+it.confidence);
     }
   }
 }
+// segmentation never splits inside a word
+const seg=app.splitSegments('תיעוד מפורט של השיחה. משפט שני!');
+assert.deepEqual(seg.map(s=>s.text),['תיעוד מפורט של השיחה.','משפט שני!'],'no letter-spacing, sentence split only');
 
-// 3. search
+// 3. search: prefixes, synonyms, groups
 const s1=app.searchAll('דניאל');
-assert(s1.total>0,'search דניאל has results');
 assert(s1.groups.person.some(p=>p.title==='דניאל'),'person in results');
 assert(s1.groups.meeting.some(m=>m.id==='m2'),'meeting m2 in results');
-const s2=app.searchAll('מה ייעצתי לדניאל בפגישה הקודמת ולמה?');
-assert(s2.groups.meeting.length>=1,'question-form query works');
-assert(s2.groups.meeting[0].snippet.includes('<mark>'),'snippet highlights matches');
-const s3=app.searchAll('עקרונות זוגי');
-assert(s3.groups.principle.length>=1,'principle search works');
-const s4=app.searchAll('גבול משפחה');
-assert(s4.total>0,'גבול משפחה finds something');
-const s5=app.searchAll('   ');
-assert.equal(s5.total,0,'empty query → 0');
-// highlight never breaks escaping
-const s6=app.searchAll('לוי');
-assert(!s6.groups.meeting.some(m=>m.snippet.includes('<mark>>')),'no broken marks');
+const s2=app.searchAll('מה ייעצתי לדניאל ולמה?');
+assert(s2.groups.advice.length>=1,'question-form finds advice');
+assert(app.searchAll('בגבולות').groups.meeting.some(m=>m.id==='m1'),'prefix ב stripped');
+assert(app.searchAll('מריבות').groups.meeting.some(m=>m.id==='m2'),'synonym מריבות→ויכוחים');
+assert(app.searchAll('גבולות מול ההורים').groups.meeting[0].id==='m1','multi-word Hebrew query');
+assert(app.searchAll('עבודה').groups.meeting.some(m=>m.id==='m3'),'m3 by work');
+assert.equal(app.searchAll('   ').total,0,'empty query');
+assert(!app.searchAll('לוי').groups.meeting.some(m=>/<mark>[^<]*<mark>/.test(m.snippet)),'no nested marks');
+assert(app.searchAll('<script>').total===0,'no crash on markup');
 
-// 4. related principles heuristic
+// 4. people derived from meetings, not stale counters
+const dn=app.allPeople().find(p=>p.name==='דניאל');
+assert.equal(dn.count,2,'daniel has 2 meetings');
+assert.equal(dn.last,'2026-09-17');
+assert.equal(app.adviceChanges().length,1,'daniel advice change detected');
+
+// 5. principles linked by overlap (hypothesis)
 const rel1=app.relatedPrinciples(data.meetings[0]);
-assert(rel1.length>=1,'m1 related principles');
-assert(rel1[0].principle.title.includes('גבול'),'top related for m1 is the boundary principle');
+assert(rel1.length>=1&&rel1[0].principle.title.includes('גבול'),'m1 → boundary principle');
+assert(app.linkedCases(data.principles[2]).some(m=>m.person==='דניאל'),'stop principle linked to daniel');
 
-// 5. modelContext tools registered with same names
+// 6. zmanim + hebrew date
+const z=app.zmanimFor(new Date('2026-06-21T09:00:00Z'));
+const fmt=new Intl.DateTimeFormat('en-GB',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Asia/Jerusalem'});
+assert.equal(fmt.format(z.find(x=>x.k==='sunrise').t),'05:37','netivot sunrise june 21');
+assert.equal(fmt.format(z.find(x=>x.k==='sunset').t),'19:49','netivot sunset june 21');
+assert(z.every((x,i)=>i===0||x.t>z[i-1].t),'zmanim ordered');
+assert.equal(app.gematria(15),'ט״ו');assert.equal(app.gematria(5787),'תשפ״ז');
+assert.equal(app.hebrewDate(new Date('2026-09-27T09:00:00Z')),'ט״ז בתשרי תשפ״ז');
+
+// 7. import: full transcript + PLAUD kept, followups from analysis, due in the future of the meeting
+const before=data.followups.length;
+const m=app.importMeeting({title:'בדיקה',person:'רות',date:'2026-09-01',transcript:'רות מתלבטת לגבי מעבר דירה. המלצתי לבדוק שתי שכונות. בפגישה הבאה נבדוק מה מצאה.',plaud:'סיכום PLAUD'});
+assert.equal(app.data.meetings[0].plaud,'סיכום PLAUD','plaud stored');
+assert(app.data.meetings[0].transcript.includes('מעבר דירה'),'full transcript stored');
+assert.equal(app.data.followups.length,before+1,'followup from analysis');
+assert.equal(app.data.followups[0].due,'2026-09-08','followup due = meeting + 7 days');
+assert.equal(app.data.followups[0].meetingId,m.id,'followup linked to source');
+assert(app.allPeople().some(p=>p.name==='רות'),'person created');
+
+// 8. backup validation
+assert(app.validBackup({data:app.data}),'own data is a valid backup');
+assert(!app.validBackup({data:{meetings:[{}]}}),'garbage rejected');
+
+// 9. modelContext tools keep their names; search is side-effect free
 const tools=documentStub.modelContext.__tools.map(t=>t.name).sort();
 assert.deepEqual(tools,['create_follow_up','search_consulting_knowledge'],'tool names preserved');
 const searchTool=documentStub.modelContext.__tools.find(t=>t.name==='search_consulting_knowledge');
+windowStub.location.hash='#people';
 const res=searchTool.execute({query:'דניאל'});
-assert(res.count>0&&Array.isArray(res.results),'tool returns results');
+assert(res.count>0&&res.results.every(r=>!/<[a-z]/.test(r.summary)),'tool returns plain results');
+assert.equal(windowStub.location.hash,'#people','read-only tool does not navigate');
 const fuTool=documentStub.modelContext.__tools.find(t=>t.name==='create_follow_up');
-const before=data.followups.length;
-const fu=fuTool.execute({person:'דניאל',title:'בדיקת מעקב',due:'2026-10-01'});
-assert.equal(data.followups.length,before+1,'followup created via tool');
-assert.equal(fu.status,'created');
+const n=app.data.followups.length;
+assert.equal(fuTool.execute({person:'דניאל',title:'בדיקת מעקב',due:'2026-10-01'}).status,'created');
+assert.equal(app.data.followups.length,n+1);
 assert.throws(()=>fuTool.execute({person:'x',title:'y',due:'bad'}),'tool validates due');
 
-// 6. speakers + timestamps parsing
-const segs=app.splitSegments('[00:02] אבי: שלום לך\n[00:15] אבי: מה הקושי המרכזי שלך?\n[00:30] רות: אני מתקשה בישן\n[00:41] רות: הכישלון המרכזי הוא ההרגשה');
-assert.equal(segs.length,4,'speaker lines split');
-assert.equal(segs[0].time,'00:02','timestamp parsed');
-assert.equal(segs[0].speaker,'אבי','speaker parsed');
-assert.equal(segs[2].speaker,'רות');
-const analysis=app.analyzeTranscript('אבי: שלום\nאבי: הקושי המרכזי הוא התערבות. המלצתי להציג עמדה משותפת. בפישה הבאה נבדוק.');
-// (intentional: no typos here — check real text below)
-const analysis2=app.analyzeTranscript('הקושי המרכזי הוא התערבות. המלצתי להציג עמדה משותפת כי זה יוצר ביטחון. בפגישה הבאה נבדוק.');
-assert(analysis2.problem&&analysis2.advice.length&&analysis2.reasoning.length&&analysis2.followups.length,'full chain detected');
-assert(analysis2.reasoning.some(r=>r.text.includes('כי')),'rationale clause extracted from advice sentence');
-assert.equal(analysis2.problem.kind,'explicit');
-
 console.log('ALL SMOKE TESTS PASSED');
-console.log('sample analysis (m2):',JSON.stringify({problem:a2.problem?.text,advice:a2.advice.map(x=>x.text),followups:a2.followups.map(x=>x.text)},null,1).slice(0,400));

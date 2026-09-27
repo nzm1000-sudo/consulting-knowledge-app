@@ -1,46 +1,57 @@
 'use strict';
 /* ============================================================
-   מאגר הייעוץ — v2.0
+   מאגר הייעוץ · v3.0 "Clear View"
    Vanilla JS PWA · RTL · localStorage
-   שמור: מפתח אחסון, SEED, routes, זרימת ייבוא, modelContext tools
+   שמור: מפתח האחסון, מבנה הנתונים, ה־routes הישנים, כלי modelContext
    ============================================================ */
 
-/* ---------- Seed (לא שונה) ---------- */
+/* ---------- נתוני דוגמה (סינתטיים בלבד) ---------- */
 const SEED = {
   meetings: [
-    {id:'m1',title:'שיחה על גבולות במשפחה',person:'משפחת לוי',date:'2026-09-08',summary:'הוגדרה שיחה משותפת להצבת גבול ברור מול המשפחה המורחבת.',transcript:'הקושי המרכזי הוא התערבות חוזרת של ההורים. המלצתי שהבעל והאישה ינסחו יחד גבול אחיד ויציגו אותו כעמדה משותפת.',tags:['גבולות','זוגיות']},
-    {id:'m2',title:'פגישת מעקב — תקשורת בזמן קונפליקט',person:'דניאל',date:'2026-09-03',summary:'נבחר כלל של עצירה לעשר דקות לפני חזרה לשיחה טעונה.',transcript:'דניאל תיאר ויכוחים שמסלימים. המלצתי לעצור, להירגע ולחזור לשיחה בזמן מוסכם. בפגישה הבאה נבדוק אם הצליחו ליישם.',tags:['תקשורת','ויסות']},
-    {id:'m3',title:'התלבטות סביב שינוי מקצועי',person:'נועה',date:'2026-08-27',summary:'הוחלט לבדוק מעבר הדרגתי במקום החלטה חדה מתוך לחץ.',transcript:'נועה שוקלת לעזוב את העבודה. סיכמנו שתבצע שני ניסויים קטנים לפני החלטה ותתעד מה נותן לה אנרגיה.',tags:['החלטות','קריירה']}
+    {id:'m1',title:'שיחה על גבולות במשפחה',person:'משפחת לוי',date:'2026-09-08',summary:'הוגדרה שיחה משותפת להצבת גבול ברור מול המשפחה המורחבת.',transcript:'הקושי המרכזי הוא התערבות חוזרת של ההורים. המלצתי שהבעל והאישה ינסחו יחד גבול אחיד ויציגו אותו כעמדה משותפת.',plaud:'נושא: התערבות ההורים בחיי הזוג.\nהמלצה: לגבש עמדה משותפת לפני הצגת הגבול.\nמשימה: שיחה משותפת של בני הזוג לפני המפגש המשפחתי הבא.',tags:['גבולות','זוגיות']},
+    {id:'m2',title:'פגישת מעקב · תקשורת בזמן קונפליקט',person:'דניאל',date:'2026-09-03',summary:'נבחר כלל של עצירה לעשר דקות לפני חזרה לשיחה טעונה.',transcript:'דניאל תיאר ויכוחים שמסלימים. המלצתי לעצור, להירגע ולחזור לשיחה בזמן מוסכם. בפגישה הבאה נבדוק אם הצליחו ליישם.',plaud:'נושא: ויכוחים שמסלימים בין בני הזוג.\nהמלצה: כלל עצירה של עשר דקות וחזרה בזמן מוסכם.\nמעקב: לבדוק יישום בפגישה הבאה.',tags:['תקשורת','ויסות']},
+    {id:'m3',title:'התלבטות סביב שינוי מקצועי',person:'נועה',date:'2026-08-27',summary:'הוחלט לבדוק מעבר הדרגתי במקום החלטה חדה מתוך לחץ.',transcript:'נועה שוקלת לעזוב את העבודה. סיכמנו שתבצע שני ניסויים קטנים לפני החלטה ותתעד מה נותן לה אנרגיה.',plaud:'נושא: שקילת עזיבת מקום העבודה.\nהחלטה: שני ניסויים קטנים לפני החלטה.\nמשימה: יומן אנרגיה שבועי.',tags:['החלטות','קריירה']},
+    {id:'m4',title:'מעקב · איך עבד כלל עשר הדקות',person:'דניאל',date:'2026-09-17',summary:'הכלל עבד חלקית. נוסף ניסוח מפורש של זמן החזרה.',transcript:'[00:01] היועץ: איך עבד כלל עשר הדקות?\n[00:20] דניאל: עבד בשתי מריבות מתוך שלוש. בפעם השלישית אשתי הרגישה שאני בורח.\n[01:05] היועץ: המלצתי שלפני העצירה תאמר במפורש מתי תחזור, כי בלי זמן חזרה העצירה נשמעת כנטישה.\n[01:20] היועץ: בבית עם ילדים קטנים זה לא תמיד אפשרי, ואז עוצרים רק את הנושא ולא את השיחה.\n[01:40] היועץ: המטרה היא שהעצירה תיתפס ככלי משותף ולא כבריחה.\n[02:10] היועץ: בפגישה הבאה נבדוק אם הניסוח המפורש שינה את התגובה.',plaud:'נושא: תוצאות כלל עשר הדקות.\nתוצאה: הצליח בשתיים מתוך שלוש מריבות.\nהמלצה: לומר במפורש מתי חוזרים לשיחה.\nחריג: כשיש ילדים קטנים בבית עוצרים את הנושא ולא את השיחה.',tags:['תקשורת','ויסות']}
   ],
-  people:[{name:'משפחת לוי',meetings:4,last:'8 בספטמבר',topic:'גבולות משפחתיים'},{name:'דניאל',meetings:7,last:'3 בספטמבר',topic:'תקשורת זוגית'},{name:'נועה',meetings:3,last:'27 באוגוסט',topic:'שינוי מקצועי'}],
+  people:[{name:'משפחת לוי',topic:'גבולות משפחתיים'},{name:'דניאל',topic:'תקשורת זוגית'},{name:'נועה',topic:'שינוי מקצועי'}],
   principles:[
-    {title:'חזית זוגית משותפת לפני הצבת גבול',description:'מגבשים עמדה בין בני הזוג ורק אז מציגים אותה למשפחה המורחבת.',uses:47,positive:39,confidence:83},
-    {title:'לא מקבלים החלטה גדולה מתוך סערה',description:'מפרקים החלטה לניסויים קטנים ואוספים מידע לפני צעד בלתי הפיך.',uses:31,positive:26,confidence:84},
-    {title:'עצירה היא כלי תקשורת, לא נטישה',description:'מגדירים מראש זמן חזרה לשיחה כדי שהפסקה תייצר ביטחון.',uses:22,positive:18,confidence:82}
+    {title:'חזית זוגית משותפת לפני הצבת גבול',description:'מגבשים עמדה בין בני הזוג ורק אז מציגים אותה למשפחה המורחבת.'},
+    {title:'לא מקבלים החלטה גדולה מתוך סערה',description:'מפרקים החלטה לניסויים קטנים ואוספים מידע לפני צעד בלתי הפיך.'},
+    {title:'עצירה היא כלי תקשורת, לא נטישה',description:'מגדירים מראש זמן חזרה לשיחה כדי שהפסקה תייצר ביטחון.'}
   ],
-  followups:[{id:'f1',person:'דניאל',title:'לבדוק איך עבד כלל עשר הדקות',due:'2026-09-14',done:false},{id:'f2',person:'משפחת לוי',title:'מה הייתה תגובת המשפחה לגבול החדש?',due:'2026-09-16',done:false},{id:'f3',person:'נועה',title:'לעבור על תוצאות שני הניסויים',due:'2026-09-20',done:false}]
+  followups:[
+    {id:'f1',person:'דניאל',title:'לבדוק איך עבד כלל עשר הדקות',due:'2026-09-14',done:true,meetingId:'m2'},
+    {id:'f2',person:'משפחת לוי',title:'מה הייתה תגובת המשפחה לגבול החדש?',due:'2026-09-16',done:false,meetingId:'m1'},
+    {id:'f3',person:'נועה',title:'לעבור על תוצאות שני הניסויים',due:'2026-09-20',done:false,meetingId:'m3'},
+    {id:'f4',person:'דניאל',title:'האם הניסוח המפורש של זמן החזרה שינה את התגובה?',due:'2026-10-01',done:false,meetingId:'m4'}
+  ]
 };
 
 /* ---------- אחסון ---------- */
 const LS_KEY='consultingKnowledge';
-let storageOk=true, storageWarned=false;
+const BACKUP_KEY='consultingLastBackup';
+let storageWarned=false;
 function load(){try{return JSON.parse(localStorage.getItem(LS_KEY))||structuredClone(SEED)}catch{return structuredClone(SEED)}}
 function save(){
   try{localStorage.setItem(LS_KEY,JSON.stringify(data))}
-  catch{storageOk=false;if(!storageWarned){storageWarned=true;toast('האחסון המקומי לא זמין — השינויים ישמרו עד סיום הטעינה')}}
+  catch{if(!storageWarned){storageWarned=true;toast('האחסון במכשיר לא זמין. השינויים יישמרו רק עד סגירת הדף.')}}
 }
 
 /* ---------- עזרים ---------- */
 const el=id=>document.getElementById(id);
-const qsa=s=>document.querySelectorAll(s);
+const qsa=(s,root=document)=>root.querySelectorAll(s);
 function esc(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function formatDate(d){const dt=new Date(d+'T12:00:00');const o={day:'numeric',month:'long'};if(dt.getFullYear()!==new Date().getFullYear())o.year='numeric';return new Intl.DateTimeFormat('he-IL',o).format(dt)}
-function formatFull(d){return new Intl.DateTimeFormat('he-IL',{weekday:'short',day:'numeric',month:'long',year:'numeric'}).format(new Date(d+'T12:00:00'))}
-function todayISO(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function parseDay(d){return new Date(d+'T12:00:00')}
+function formatDate(d){const dt=parseDay(d);const o={day:'numeric',month:'long'};if(dt.getFullYear()!==new Date().getFullYear())o.year='numeric';return new Intl.DateTimeFormat('he-IL',o).format(dt)}
+function formatFull(d){return new Intl.DateTimeFormat('he-IL',{weekday:'short',day:'numeric',month:'long',year:'numeric'}).format(parseDay(d))}
+function isoOf(dt){return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0')}
+function todayISO(){return isoOf(new Date())}
+function addDays(iso,n){const d=parseDay(iso);d.setDate(d.getDate()+n);return isoOf(d)}
 function dueLabel(d){
-  const today=new Date();today.setHours(0,0,0,0);
-  const days=Math.round((new Date(d+'T12:00:00')-today)/864e5);
-  if(days<0)return{t:'עברו '+(-days)+' ימים',cls:'overdue'};
+  if(!d)return{t:'ללא תאריך',cls:''};
+  const today=new Date();today.setHours(12,0,0,0);
+  const days=Math.round((parseDay(d)-today)/864e5);
+  if(days<0)return{t:days===-1?'עבר יום אחד':'עברו '+(-days)+' ימים',cls:'overdue'};
   if(days===0)return{t:'היום',cls:'today'};
   if(days===1)return{t:'מחר',cls:''};
   return{t:formatDate(d),cls:''};
@@ -52,14 +63,18 @@ function confLabel(c){
   return{label:'ביטחון נמוך',n:1};
 }
 let toastTimer=null;
-function toast(msg){const t=el('toast');if(!t)return;t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2600)}
+function toast(msg){const t=el('toast');if(!t)return;t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800)}
+function ssGet(k,fb){try{const v=sessionStorage.getItem(k);return v?JSON.parse(v):fb}catch{return fb}}
+function ssSet(k,v){try{sessionStorage.setItem(k,JSON.stringify(v))}catch{}}
 
-/* ---------- אייקונים (SVG) ---------- */
+/* ---------- אייקונים ---------- */
 const ICONS={
   home:'<path d="M4 9.5 10 4l6 5.5V16a1 1 0 0 1-1 1h-3.5v-4.2h-3V17H5a1 1 0 0 1-1-1z"/>',
   mic:'<rect x="7.3" y="3" width="5.4" height="9.4" rx="2.7"/><path d="M5 10.8a5 5 0 0 0 10 0M10 15.8V18"/>',
   users:'<circle cx="7.2" cy="7.3" r="2.7"/><path d="M2.8 16.4c.6-2.9 2.4-4.4 4.4-4.4s3.8 1.5 4.4 4.4M13.2 5a2.5 2.5 0 1 1 .4 4.9M14.3 12.2c1.9.4 3.1 1.8 3.5 4"/>',
   spark:'<path d="M10 2.6 12 8l5.4 2L12 12l-2 5.4L8 12 2.6 10 8 8z"/>',
+  bulb:'<path d="M7.2 13.2c-1.5-1-2.5-2.7-2.5-4.6a5.3 5.3 0 0 1 10.6 0c0 1.9-1 3.6-2.5 4.6v1.6H7.2zM7.8 17.4h4.4"/>',
+  split:'<path d="M10 3v5M10 8 4.5 13.5V17M10 8l5.5 5.5V17"/>',
   search:'<circle cx="9" cy="9" r="5.4"/><path d="m13.1 13.1 3.9 3.9"/>',
   check:'<circle cx="10" cy="10" r="7"/><path d="m6.7 10.3 2.2 2.2 4.4-4.8"/>',
   checksm:'<path d="m4.5 10.5 3.4 3.4 7.6-8.3"/>',
@@ -74,41 +89,56 @@ const ic=(n,cls='')=>`<svg class="ic ${cls}" viewBox="0 0 20 20" fill="none" str
 
 /* ---------- ניווט ---------- */
 const NAV=[
-  {key:'home',label:'בית',icon:'home'},
-  {key:'recordings',label:'הקלטות',icon:'mic',count:()=>data.meetings.length},
-  {key:'people',label:'אנשים',icon:'users',count:()=>data.people.length},
-  {key:'principles',label:'עקרונות',icon:'spark',count:()=>data.principles.length},
-  {key:'search',label:'חיפוש',icon:'search'},
-  {key:'followups',label:'מעקבים',icon:'check',count:()=>data.followups.filter(f=>!f.done).length,alert:true}
+  {group:'עבודה יומית',items:[
+    {key:'home',label:'היום',icon:'home',mobile:true},
+    {key:'recordings',label:'הקלטות',icon:'mic',count:()=>data.meetings.length,mobile:true},
+    {key:'people',label:'אנשים',icon:'users',count:()=>allPeople().length,mobile:true},
+    {key:'followups',label:'מעקבים',icon:'check',count:()=>data.followups.filter(f=>!f.done).length,alert:()=>data.followups.some(f=>!f.done&&f.due&&f.due<todayISO()),mobile:true}
+  ]},
+  {group:'הידע',items:[
+    {key:'advice',label:'עצות ונימוקים',icon:'bulb',count:()=>allAdvice().length,mobile:true},
+    {key:'principles',label:'עקרונות',icon:'spark',count:()=>data.principles.length},
+    {key:'contradictions',label:'סתירות וחריגים',icon:'split',count:()=>contradictionCount()}
+  ]}
 ];
 const PARENT={case:'recordings',person:'people',principle:'principles'};
+const KNOWN=['home','recordings','people','followups','advice','principles','contradictions','search','case','person','principle'];
 function parseRoute(){
   let h=(location.hash||'').replace(/^#/,'');
   if(h.startsWith('/'))h=h.slice(1);
   if(!h)return{key:'home',param:null};
   const i=h.indexOf('/');
   const key=i<0?h:h.slice(0,i);
-  const param=i<0?null:decodeURIComponent(h.slice(i+1));
+  let param=null;
+  if(i>=0){try{param=decodeURIComponent(h.slice(i+1))}catch{param=h.slice(i+1)}}
   return{key,param};
 }
 function navigate(key,param){
   const target=param?'/'+key+'/'+encodeURIComponent(param):key;
-  if(location.hash==='#'+target){render()}
-  else{location.hash=target}
+  if(location.hash==='#'+target)render();
+  else location.hash=target;
 }
 
-/* ---------- ניתוח מקומי (rule-based, pure) ---------- */
+/* ---------- מצב ניווט (נשמר בין מסכים) ---------- */
+const navState=ssGet('consultingNav',{scroll:{},lastCase:null,filters:{},caseTab:{}});
+let pendingJump=null;
+function persistNav(){ssSet('consultingNav',navState)}
+
+/* ---------- ניתוח מקומי (כללים, פונקציה טהורה) ---------- */
+const ANALYSIS_VERSION=3;
+const ENGINE_LABEL='כללים מקומיים';
 const H={
-  contradiction:/(שונה מכלל|חריג (ל|לכלל)|לעומת( זה)?, אבל|לא תמיד|בתנאים מסוימים)/,
-  advice:/(המלצתי|המלצנו|אני מציע(ה)?|אני ממליץ(ת)?|מומלץ(ת)?|כדאי|מוטב|צריך(ת)? (ש|ל)|נראה לי (שת|שתעשה))/,
+  contradiction:/(שונה מכלל|חריג|לעומת זאת|לא תמיד|בתנאים מסוימים|יוצא מן הכלל)/,
+  advice:/(המלצתי|המלצנו|הצעתי|אני מציע(ה)?|אני ממליץ(ה)?|מומלץ|כדאי|מוטב|צריך(ה)? (ש|ל)|נראה לי (שת|שכדאי))/,
   decision:/(הוחלט|החלטנו|סיכמנו|הסכמנו)/,
-  followup:/(בפגישה הבאה|בפגישה העתידה|נבדוק|לבדוק|מעקב|אחרי כן נבדוק|נחזור (על|ל) זה)/,
-  rationale:/(מכיוון|בגלל|הסיבה (היא|היא כי)|שכן|כדי ש|על מנת|המניע|הנימוק)/,
-  problem:/(הקושי|הבעיה|מתקש(ה|ת|ים|ות)|פוערים|פחד(ה|ו|ת)?|חושש(ת)?|מפחיד(ה)?|שוקל(ת)?|מתלבט(ת)?|נתקע(ה)?|סובל(ת)?)/,
-  observation:/(תיאר(ה)?|דיווח(ה)?|מספר(ה)?|משתף(ת)?|עולה (מה|מתמלול)|הבנתי שמ)/,
-  outcome:/(התוצאה הצפויה|מטרת הפגישה|אמלי|אמוליד)/
+  followup:/(בפגישה הבאה|בפגישה העתידה|נבדוק|לבדוק|מעקב|נחזור (על|ל)?זה|נחזור לזה)/,
+  result:/(^|[\s,])(עבד|עבדה|עבדו|הצליח|הצליחה|הצליחו|לא הצליח|השתפר|השתפרה|השתפרו|יישם|יישמה|יישמו|עזר|עזרה|לא עזר)(?=[\s.,!?]|$)/,
+  outcome:/(המטרה|התוצאה (הצפויה|הרצויה)|מצפ(ה|ים) ש|הציפייה)/,
+  rationale:/(מכיוון|בגלל|הסיבה|שכן|כדי ש|על מנת|הנימוק)/,
+  problem:/(הקושי|הבעיה|מתקש|ויכוח|מריב|קונפליקט|מסלימ|פחד|חושש|שוקל|מתלבט|נתקע|סובל|לחץ)/,
+  observation:/(תיאר|דיווח|סיפר|שיתף|שיתפה|הרגיש|שמתי לב|הבנתי ש|ניכר ש)/
 };
-const LABEL_WORDS=new Set(['מטרה','סיכום','תאריך','זמן','נושא','שם','עמודה','סוג','מקור']);
+const LABEL_WORDS=new Set(['מטרה','סיכום','תאריך','זמן','נושא','שם','עמודה','סוג','מקור','המלצה','משימה','תוצאה','חריג','החלטה','מעקב']);
 function splitSegments(transcript){
   const out=[];
   const lines=String(transcript||'').split(/\n+/).map(l=>l.trim()).filter(Boolean);
@@ -120,13 +150,9 @@ function splitSegments(transcript){
     const sm=rest.match(/^([^:：]{2,25})[:：]\s*(.+)$/);
     if(sm&&!/^\d/.test(sm[1])&&!/[.,?!]/.test(sm[1])&&!LABEL_WORDS.has(sm[1].trim())){speaker=sm[1].trim();rest=sm[2].trim()}
     if(!rest)continue;
-    // פירוק לשדרות — גרנולריות של הוכחה טובה יותר, גם בתמלול של שורה בודדת
+    // פיצול למשפטים שלמים בלבד, לפי סימן סוף משפט ורווח. אין פיצול בתוך מילה.
     const sents=rest.split(/(?<=[.!?…])\s+/).map(s=>s.trim()).filter(Boolean);
     for(const s of sents)out.push({speaker,time,text:s});
-  }
-  if(!out.length){
-    const sents=String(transcript||'').split(/(?<=[.!?…])\s+/).map(s=>s.trim()).filter(Boolean);
-    for(const s of sents)out.push({speaker:null,time:null,text:s});
   }
   return out;
 }
@@ -140,887 +166,1018 @@ function analyzeTranscript(text){
   };
   segments.forEach((seg,i)=>{
     const t=seg.text;
+    const question=/\?\s*$/.test(t);
     if(H.contradiction.test(t))push('contradiction',seg,i,'inferred',60);
-    else if(H.advice.test(t))push('advice',seg,i,'explicit',84);
+    else if(!question&&H.advice.test(t))push('advice',seg,i,'explicit',84);
     else if(H.decision.test(t))push('decision',seg,i,'explicit',80);
     else if(H.followup.test(t))push('followup',seg,i,'explicit',78);
+    else if(!question&&H.result.test(t))push('result',seg,i,'explicit',72);
+    else if(H.outcome.test(t))push('outcome',seg,i,'explicit',74);
     else if(H.rationale.test(t))push('reasoning',seg,i,'explicit',74);
     else if(H.problem.test(t))push('problem',seg,i,'explicit',76);
     else if(H.observation.test(t))push('observation',seg,i,'inferred',64);
-    else if(segments.length<=6)push('observation',seg,i,'inferred',48);
+    else if(!question&&segments.length<=6)push('observation',seg,i,'inferred',48);
   });
-  // נימוק שמוטמע בתוך משפט העצה — מופק כתצפית נפרדת (inferred)
-  const RATIONALE_CLAUSE=/\s(כי|מכיוון|בגלל|שכן|כדי ש|על מנת)\s+(\S.*)$/;
+  // נימוק שמוטמע בתוך משפט העצה או ההחלטה
+  const RATIONALE_CLAUSE=/[\s,](כי|מכיוון ש|בגלל ש|שכן|כדי ש|על מנת ל)\s*(\S.*)$/;
   for(const it of [...items]){
     if(it.type!=='advice'&&it.type!=='decision')continue;
     const mm=it.text.match(RATIONALE_CLAUSE);
     if(mm&&mm[2].length>=8){
-      items.push({id:'reasoning-c-'+it.evidence.seg,type:'reasoning',text:mm[0].trim(),kind:'inferred',confidence:70,evidence:{...it.evidence}});
+      items.push({id:'reasoning-c-'+it.evidence.seg,type:'reasoning',text:mm[0].replace(/^[\s,]+/,''),kind:'inferred',confidence:70,evidence:{...it.evidence},forAdvice:it.id});
     }
   }
   const by=t=>items.filter(x=>x.type===t);
   const problems=by('problem');
   const times=segments.map(s=>s.time).filter(Boolean);
   return {
+    version:ANALYSIS_VERSION,
     segments,
     speakers:[...new Set(segments.map(s=>s.speaker).filter(Boolean))],
     problem:problems[0]||null,
-    observations:problems.slice(1).concat(by('observation')).slice(0,5),
+    observations:problems.slice(1).concat(by('observation')).slice(0,6),
     reasoning:by('reasoning'),
-    advice:by('decision').concat(by('advice')).slice(0,4),
+    advice:by('decision').concat(by('advice')),
     outcomes:by('outcome'),
+    results:by('result'),
     followups:by('followup'),
     contradictions:by('contradiction'),
     wordCount:String(text||'').trim().split(/\s+/).filter(Boolean).length,
-    timeRange:times.length>=2?times[0]+'–'+times[times.length-1]:(times.length===1?null:null),
+    timeRange:times.length>=2?times[0]+'–'+times[times.length-1]:null,
     summary:(by('decision').concat(by('advice'))[0]||problems[0]||segments[0])?.text||''
   };
 }
 function ensureAllAnalysis(){
   let changed=false;
   for(const m of data.meetings){
-    if(!m.analysis){m.analysis=analyzeTranscript(m.transcript);changed=true}
-    if(!m.id)m.id='m-'+Date.now()+'-'+Math.floor(Math.random()*1e4);
+    if(!m.id){m.id='m-'+Date.now()+'-'+Math.floor(Math.random()*1e4);changed=true}
+    if(!m.analysis||m.analysis.version!==ANALYSIS_VERSION){m.analysis=analyzeTranscript(m.transcript);changed=true}
   }
   data.principles.forEach((p,i)=>{if(!p.id){p.id='p'+(i+1);changed=true}});
   if(changed)save();
 }
-function relatedPrinciples(meeting,limit=3){
-  const an=meeting.analysis||{};
-  const hay=[meeting.title,meeting.summary,...(meeting.tags||[]),
-    ...(an.advice||[]).map(a=>a.text),...(an.observations||[]).map(o=>o.text)]
-    .filter(Boolean).join(' ').toLowerCase();
-  if(!hay.trim())return[];
-  return data.principles
-    .map(p=>{
-      const words=p.title.toLowerCase().split(/\s+/).concat(p.description.toLowerCase().split(/\s+/));
-      let s=0;for(const w of words){if(w.length>=3&&!STOP.has(w)&&hay.includes(w))s+=1}
-      return{principle:p,strength:s};
-    })
-    .filter(x=>x.strength>0)
-    .sort((a,b)=>b.strength-a.strength)
-    .slice(0,limit);
-}
-function tagCounts(meetings){
-  const c=new Map();
-  for(const m of meetings)for(const t of (m.tags||[]))c.set(t,(c.get(t)||0)+1);
-  return[...c.entries()].sort((a,b)=>b[1]-a[1]);
+function reasonFor(an,adv){
+  const rs=an.reasoning||[];
+  return rs.find(r=>r.forAdvice===adv.id)||rs.find(r=>!r.forAdvice)||null;
 }
 
-/* ---------- חיפוש ---------- */
-const STOP=new Set(('מה מתי איך למה לאן האם מי איזה איזו באילו באיזו אלו אלה את אתה אני הוא היא זה זו של שלנו שלכם שלך כי ב בה בא בו בעל על עלי עליה עליו עם אצל גם רק לא כן יותר כדי לתת שאלה תרצה נא ממש כנראה אפשר לך לי לו לה לנו מהם איתו איתה בין עבור מהן').split(' '));
-function tokenize(q){
-  return String(q||'').toLowerCase().replace(/[“”"«»]/g,' ')
-    .split(/\s+/)
-    .map(w=>w.replace(/^[.,!?…:;()\-—]/,'').replace(/[.,!?…:;()\-—]$/,''))
-    .filter(w=>w.length>=2&&!STOP.has(w));
+/* ---------- נגזרות מהנתונים ---------- */
+const byDateDesc=(a,b)=>b.date.localeCompare(a.date);
+function meetingsOf(name){return data.meetings.filter(m=>m.person===name).sort(byDateDesc)}
+function allPeople(){
+  const names=new Map();
+  for(const p of data.people)names.set(p.name,p);
+  for(const m of data.meetings)if(!names.has(m.person))names.set(m.person,{name:m.person});
+  return[...names.values()].map(p=>{
+    const ms=meetingsOf(p.name);
+    return{...p,count:ms.length,last:ms[0]?.date||null,first:ms[ms.length-1]?.date||null,topic:p.topic||(ms[0]?.tags||[])[0]||''};
+  }).sort((a,b)=>(b.last||'').localeCompare(a.last||''));
 }
-function highlightEsc(escaped,tokens){
-  let out=escaped;
-  const seen=new Set();
-  for(const tok of tokens){
-    if(seen.has(tok))continue;seen.add(tok);
-    try{out=out.replace(new RegExp(tok.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'),m=>'<mark>'+m+'</mark>')}catch{}
+function allAdvice(){
+  const out=[];
+  for(const m of [...data.meetings].sort(byDateDesc)){
+    const an=m.analysis||{};
+    for(const a of an.advice||[])out.push({m,a,reason:reasonFor(an,a)});
   }
   return out;
 }
-function snippetFor(m,tokens){
-  for(const c of [m.transcript,m.summary,m.title].filter(Boolean)){
-    const cl=c.toLowerCase();let idx=-1;
-    for(const tok of tokens){const i=cl.indexOf(tok);if(i>=0&&(idx<0||i<idx))idx=i}
-    if(idx>=0){
-      const start=Math.max(0,idx-70),end=Math.min(c.length,idx+110);
-      return highlightEsc(esc((start>0?'…':'')+c.slice(start,end)+(end<c.length?'…':'')),tokens);
+function adviceChanges(){
+  const out=[];
+  for(const p of allPeople()){
+    const ms=meetingsOf(p.name).filter(m=>(m.analysis?.advice||[]).length);
+    for(let i=0;i<ms.length-1;i++){
+      out.push({person:p.name,later:ms[i],earlier:ms[i+1],a1:ms[i+1].analysis.advice[0],a2:ms[i].analysis.advice[0]});
     }
   }
-  return esc((m.summary||m.title||'').slice(0,140));
+  return out;
 }
-function searchAll(q){
-  const query=String(q||'').trim();
-  const tokens=tokenize(query);
-  const groups={meeting:[],person:[],principle:[],followup:[]};
-  if(!tokens.length)return{query,tokens,groups,total:0};
-  const hintAdvice=/(אמרתי|ייעצתי|המלצתי|נתתי|עצתי)/.test(query);
-  const hintPrinciple=/(עקרונ|עקרון|דפוס|חוזר|חוזרות|מתודולוגיה|שיטה)/.test(query);
-  const includes=(s,tok)=>typeof s==='string'&&s&&s.toLowerCase().includes(tok);
+function allExceptions(){
+  const out=[];
+  for(const m of [...data.meetings].sort(byDateDesc))for(const c of m.analysis?.contradictions||[])out.push({m,c});
+  return out;
+}
+function contradictionCount(){return allExceptions().length+adviceChanges().length}
+const TAG_RULES=[[/גבול/,'גבולות'],[/זוג|אשתו|בעלה|אשתי|בעלי|נישוא/,'זוגיות'],[/עבודה|קריירה|מקצוע/,'קריירה'],[/ויכוח|מריב|קונפליקט/,'תקשורת'],[/החלט|מתלבט|שוקל/,'החלטות'],[/הורים|משפחה/,'משפחה'],[/ילד|ילדים|חינוך/,'הורות'],[/פחד|חרד|לחץ|להירגע/,'ויסות']];
+function inferTags(text){const t=TAG_RULES.filter(([re])=>re.test(text)).map(([,n])=>n);return t.length?[...new Set(t)].slice(0,3):['כללי']}
 
-  for(const m of data.meetings){
-    const an=m.analysis||{};
-    const fields={title:m.title,summary:m.summary,person:m.person,tags:(m.tags||[]).join(' '),transcript:m.transcript||''};
-    const adviceText=(an.advice||[]).map(a=>a.text).join(' ').toLowerCase();
-    let score=0,hit=0;
-    for(const tok of tokens){
-      let w=0;
-      if(includes(fields.title,tok))w+=4;
-      if(includes(fields.tags,tok))w+=3;
-      if(includes(fields.summary,tok))w+=3;
-      if(includes(fields.person,tok))w+=3;
-      if(includes(fields.transcript,tok))w+=Math.min(3,(fields.transcript||'').toLowerCase().split(tok).length-1);
-      if(hintAdvice&&adviceText.includes(tok))w+=2;
-      if(w>0)hit+=1;
-      score+=w;
-    }
-    if(!hit)continue;
-    if(hit<tokens.length)score*=0.5;
-    groups.meeting.push({id:m.id,score,title:m.title,meta:esc(m.person)+' · '+formatDate(m.date),snippet:snippetFor(m,tokens),route:'case/'+m.id});
+/* ---------- חיפוש ---------- */
+const STOP=new Set(('מה מתי איך למה לאן האם מי איזה איזו באילו באיזו אלו אלה את אתה אני הוא היא זה זו של שלנו שלכם שלך כי ב בה בא בו בעל על עלי עליה עליו עם אצל גם רק לא כן יותר כדי לתת שאלה תרצה נא ממש כנראה אפשר לך לי לו לה לנו מהם איתו איתה בין עבור מהן אמרתי ייעצתי המלצתי נתתי עצתי מקרים מקרה').split(' '));
+const SYN=[
+  ['זוגיות','זוגי','בני זוג','בני הזוג','אשתו','בעלה','אשתי','נישואין'],
+  ['גבול','גבולות'],
+  ['משפחה','הורים','ההורים','משפחה מורחבת','חמות'],
+  ['עבודה','קריירה','מקצועי','מקצוע'],
+  ['ויכוח','ויכוחים','מריבה','מריבות','קונפליקט'],
+  ['פחד','חשש','חושש','לחץ','פחדו'],
+  ['החלטה','החלטות','התלבטות','מתלבט','שוקל'],
+  ['עצירה','לעצור','הפסקה','ויסות','להירגע']
+];
+const PFX=['וכש','וש','וה','וב','ול','ומ','שה','שב','של','כש','מה','בה','לה','ה','ו','ב','ל','מ','ש','כ'];
+function tokenize(q){
+  return String(q||'').toLowerCase().replace(/[“”"«»׳״']/g,' ')
+    .split(/\s+/)
+    .map(w=>w.replace(/^[.,!?…:;()\-–+]+/,'').replace(/[.,!?…:;()\-–+]+$/,''))
+    .filter(w=>w.length>=2&&!STOP.has(w));
+}
+function stems(tok){
+  const out=new Set([tok]);
+  for(const p of PFX)if(tok.startsWith(p)&&tok.length-p.length>=3)out.add(tok.slice(p.length));
+  return[...out];
+}
+function variants(tok){
+  const v=new Map();
+  for(const s of stems(tok))v.set(s,s===tok?1:0.9);
+  for(const g of SYN){
+    const hit=g.some(w=>[...v.keys()].some(s=>s===w||(w.length>=3&&s.startsWith(w))||(s.length>=3&&w.startsWith(s))));
+    if(hit)for(const w of g)if(!v.has(w))v.set(w,0.6);
   }
-  for(const p of data.people){
-    let score=0,hit=0;
-    for(const tok of tokens){
-      let w=0;
-      if(includes(p.name,tok))w+=4;
-      if(includes(p.topic,tok))w+=2;
-      if(w>0)hit+=1;score+=w;
-    }
-    if(!hit)continue;
-    groups.person.push({id:p.name,score,title:p.name,meta:esc(p.topic||'')+(p.meetings?' · '+p.meetings+' פגישות':''),route:'person/'+encodeURIComponent(p.name)});
+  return[...v.entries()].map(([s,w])=>({s,w}));
+}
+function prepQuery(q){
+  const tokens=tokenize(q);
+  return{tokens,vars:tokens.map(variants),marks:[...new Set(tokens.flatMap(t=>variants(t).map(v=>v.s)))].sort((a,b)=>b.length-a.length)};
+}
+function fieldScore(text,vars){
+  if(!text)return 0;
+  const t=String(text).toLowerCase();
+  let best=0;for(const v of vars)if(v.w>best&&t.includes(v.s))best=v.w;
+  return best;
+}
+function highlightEsc(escaped,marks){
+  if(!marks.length)return escaped;
+  const re=new RegExp('('+marks.map(m=>esc(m).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')+')','g');
+  return escaped.replace(re,'<mark>$1</mark>');
+}
+function snippetOf(text,q){
+  const t=String(text||'');const tl=t.toLowerCase();
+  let idx=-1;for(const m of q.marks){const i=tl.indexOf(m);if(i>=0&&(idx<0||i<idx))idx=i}
+  if(idx<0)return'';
+  const start=Math.max(0,idx-70),end=Math.min(t.length,idx+120);
+  return highlightEsc(esc((start>0?'…':'')+t.slice(start,end)+(end<t.length?'…':'')),q.marks);
+}
+function scoreRecord(q,fields){
+  let score=0,hit=0;
+  q.vars.forEach(vars=>{
+    let w=0;
+    for(const[text,weight]of fields)w+=fieldScore(text,vars)*weight;
+    if(w>0)hit++;score+=w;
+  });
+  if(!hit)return 0;
+  return hit<q.tokens.length?score*0.5:score;
+}
+function searchAll(query){
+  query=String(query||'').trim();
+  const q=prepQuery(query);
+  const groups={meeting:[],person:[],advice:[],principle:[],followup:[]};
+  if(!q.tokens.length)return{query,tokens:q.tokens,groups,total:0};
+  const hintAdvice=/(אמרתי|ייעצתי|המלצתי|נתתי|עצה|עצות|עצתי)/.test(query);
+  const hintPrinciple=/(עקרונ|עיקרון|דפוס|חוזר|מתודולוגיה|שיטה)/.test(query);
+  for(const m of data.meetings){
+    const s=scoreRecord(q,[[m.title,4],[(m.tags||[]).join(' '),3],[m.summary,3],[m.person,3],[m.plaud,2],[m.transcript,2]]);
+    if(!s)continue;
+    const snip=snippetOf(m.transcript,q)||snippetOf(m.plaud,q)||snippetOf(m.summary,q)||esc((m.summary||'').slice(0,140));
+    groups.meeting.push({id:m.id,score:s,title:m.title,meta:esc(m.person)+' · '+formatDate(m.date),snippet:snip,route:'case/'+m.id});
+  }
+  for(const p of allPeople()){
+    const s=scoreRecord(q,[[p.name,5],[p.topic,2]]);
+    if(!s)continue;
+    groups.person.push({id:p.name,score:s,title:p.name,meta:esc(p.topic||'')+(p.count?' · '+p.count+' פגישות':''),route:'person/'+encodeURIComponent(p.name)});
+  }
+  for(const{m,a,reason}of allAdvice()){
+    let s=scoreRecord(q,[[a.text,4],[reason?.text,2],[m.person,3],[(m.tags||[]).join(' '),2],[m.title,1]]);
+    if(!s)continue;
+    if(hintAdvice)s*=1.5;
+    groups.advice.push({id:m.id+':'+a.id,score:s,title:a.text,meta:esc(m.person)+' · '+formatDate(m.date),snippet:reason?'<b>למה:</b> '+esc(reason.text):'',route:'case/'+m.id});
   }
   for(const p of data.principles){
-    let score=0,hit=0;
-    for(const tok of tokens){
-      let w=0;
-      if(includes(p.title,tok))w+=4;
-      if(includes(p.description,tok))w+=2;
-      if(hintPrinciple&&w>0)w+=1;
-      if(w>0)hit+=1;score+=w;
-    }
-    if(!hit)continue;
-    groups.principle.push({id:p.id,score,title:p.title,meta:p.uses+' מקרים · ביטחון '+p.confidence+'%',route:'principle/'+p.id});
+    let s=scoreRecord(q,[[p.title,4],[p.description,2]]);
+    if(!s)continue;
+    if(hintPrinciple)s*=1.5;
+    groups.principle.push({id:p.id,score:s,title:p.title,meta:'עיקרון מועמד · '+linkedCases(p).length+' מקרים מקושרים',route:'principle/'+p.id});
   }
   for(const f of data.followups){
-    let score=0,hit=0;
-    for(const tok of tokens){
-      let w=0;
-      if(includes(f.title,tok))w+=4;
-      if(includes(f.person,tok))w+=3;
-      if(w>0)hit+=1;score+=w;
-    }
-    if(!hit)continue;
-    groups.followup.push({id:f.id,score,title:f.title,meta:esc(f.person)+' · '+dueLabel(f.due).t,route:'followups'});
+    const s=scoreRecord(q,[[f.title,4],[f.person,3]]);
+    if(!s)continue;
+    groups.followup.push({id:f.id,score:s,title:f.title,meta:esc(f.person)+' · '+(f.done?'הושלם':dueLabel(f.due).t),route:'followups'});
   }
-  const cap=g=>g.sort((a,b)=>b.score-a.score).slice(0,20);
-  groups.meeting=cap(groups.meeting);groups.person=cap(groups.person);
-  groups.principle=cap(groups.principle);groups.followup=cap(groups.followup);
-  const total=groups.meeting.length+groups.person.length+groups.principle.length+groups.followup.length;
-  return{query,tokens,groups,total};
+  let total=0;
+  for(const k in groups){groups[k]=groups[k].sort((a,b)=>b.score-a.score).slice(0,20);total+=groups[k].length}
+  return{query,tokens:q.tokens,groups,total};
 }
+const GROUP_ORDER=['person','advice','meeting','principle','followup'];
+const GROUP_LABEL={meeting:'הקלטות',person:'אנשים',advice:'עצות',principle:'עקרונות',followup:'מעקבים'};
+const GROUP_ICON={meeting:'mic',person:'users',advice:'bulb',principle:'spark',followup:'check'};
 
-/* ---------- recent searches ---------- */
-const RECENT_KEY='consultingRecent';
-function loadRecent(){try{return JSON.parse(localStorage.getItem(RECENT_KEY))||[]}catch{return[]}}
-function saveRecent(q){
-  q=String(q||'').trim();if(!q)return;
-  let r=loadRecent().filter(x=>x!==q);
-  r.unshift(q);r=r.slice(0,5);
-  try{localStorage.setItem(RECENT_KEY,JSON.stringify(r))}catch{}
+/* ---------- עקרונות: קישור לפי חפיפת מילים (השערה בלבד) ---------- */
+function wordsOf(s){return String(s||'').toLowerCase().split(/[\s,.]+/).filter(w=>w.length>=3&&!STOP.has(w))}
+function overlap(pr,hay){
+  let s=0;for(const w of new Set(wordsOf(pr.title+' '+pr.description))){const st=stems(w);if(st.some(x=>x.length>=3&&hay.includes(x)))s++}
+  return s;
 }
+function meetingHay(m){
+  const an=m.analysis||{};
+  return[m.title,m.summary,m.plaud,...(m.tags||[]),...(an.advice||[]).map(a=>a.text),...(an.reasoning||[]).map(a=>a.text),...(an.observations||[]).map(o=>o.text)].filter(Boolean).join(' ').toLowerCase();
+}
+function relatedPrinciples(meeting,limit=3){
+  const hay=meetingHay(meeting);
+  if(!hay.trim())return[];
+  return data.principles.map(p=>({principle:p,strength:overlap(p,hay)})).filter(x=>x.strength>=2).sort((a,b)=>b.strength-a.strength).slice(0,limit);
+}
+function linkedCases(p){return data.meetings.filter(m=>relatedPrinciples(m,5).some(r=>r.principle.id===p.id)).sort(byDateDesc)}
 
 /* ---------- רכיבי HTML ---------- */
-const GROUP_LABEL={meeting:'פגישות',person:'אנשים',principle:'עקרונות',followup:'מעקבים'};
 function pill(t,cls=''){return`<span class="pill ${cls}">${esc(t)}</span>`}
 function confHtml(c){
   const l=confLabel(c);if(!l)return'';
-  return`<span class="conf" title="רמת ביטחון: ${l.label}">${l.label}<span class="conf-dots" aria-hidden="true">${'<b></b>'.repeat(l.n)}${'<i></i>'.repeat(3-l.n)}</span></span>`;
+  return`<span class="conf" title="ביטחון המנוע בזיהוי: ${l.label}">${l.label}<span class="conf-dots" aria-hidden="true">${'<b></b>'.repeat(l.n)}${'<i></i>'.repeat(3-l.n)}</span></span>`;
 }
-function itemHtml(it,meetingId,opts={}){
-  const evId=it.evidence?`ev-${meetingId}-${it.evidence.seg}`:null;
-  return`<div class="kitem ${it.kind}">
-    <p class="kitem-text">${esc(it.text)}</p>
-    <div class="kitem-foot">
-      <span class="tag ${it.kind==='explicit'?'tag-exp':'tag-inf'}">${it.kind==='explicit'?'מופיע במפורש':'נלמד מן הטקסט'}</span>
-      ${confHtml(it.confidence)}
-      ${evId?`<a class="ev-link" href="#${evId}" data-jump-to="${evId}">${ic('quote')}ציון מקור</a>`:''}
-    </div>
+function kindTag(k){return`<span class="tag ${k==='explicit'?'tag-exp':'tag-inf'}">${k==='explicit'?'נאמר במפורש':'הסקה של המערכת'}</span>`}
+function whyHtml(it,mid){
+  const ev=it.evidence;if(!ev)return'';
+  return`<div class="why" id="why-${esc(mid)}-${esc(it.id)}" hidden>
+    <p class="why-q">״${esc(ev.quote)}״</p>
+    <div class="why-meta">${ev.speaker?`<span>${esc(ev.speaker)}</span>`:''}${ev.time?`<span class="mono" dir="ltr">${esc(ev.time)}</span>`:''}<span>משפט ${ev.seg+1} בתמלול</span>
+    <button class="link-btn" type="button" data-open-src="${ev.seg}">פתיחה בתמלול ${ic('fwd')}</button></div>
   </div>`;
 }
-function stepHtml(num,label,items,opts={}){
-  const has=items&&items.length;
-  return`<section class="chain-step ${opts.cls||''}">
-    <div class="step-head"><span class="step-num" aria-hidden="true">${num}</span><h3 class="step-label">${label}</h3></div>
-    <div class="step-body">
-      ${has?items.map(it=>itemHtml(it,opts.mid)).join(''):`<p class="step-empty">${opts.empty||'לא זוהה בפגישה זו'}</p>`}
+function itemHtml(it,mid){
+  return`<div class="kitem ${it.kind}">
+    <p class="kitem-text">${esc(it.text)}</p>
+    <div class="kitem-foot">${kindTag(it.kind)}${confHtml(it.confidence)}
+      ${it.evidence?`<button class="link-btn why-btn" type="button" aria-expanded="false" data-why="why-${esc(mid)}-${esc(it.id)}">${ic('quote')}למה?</button>`:''}
     </div>
+    ${whyHtml(it,mid)}
+  </div>`;
+}
+function stepHtml(label,items,mid,opts={}){
+  return`<section class="chain-step ${opts.cls||''}">
+    <h3 class="step-label">${label}</h3>
+    <div class="step-body">${items&&items.length?items.map(it=>itemHtml(it,mid)).join(''):`<p class="step-empty">${opts.empty||'לא זוהה בפגישה זו'}</p>`}</div>
   </section>`;
 }
 function meetingRow(m){
   const an=m.analysis||{};
-  const tags=(m.tags||[]).slice(0,2).map(t=>pill(t)).join('');
-  return`<a class="row meeting-row" href="#/case/${m.id}">
+  const isLast=navState.lastCase===m.id;
+  return`<a class="row ${isLast?'is-last':''}" href="#/case/${esc(m.id)}" data-case-row="${esc(m.id)}">
     <div class="row-main">
-      <div class="row-line1"><h3 class="row-title">${esc(m.title)}</h3>${tags}</div>
-      <div class="row-meta"><span>${esc(m.person)}</span><i class="dot-sep"></i><span>${formatDate(m.date)}</span>${an.wordCount?`<i class="dot-sep"></i><span class="mono">${an.wordCount} מילים</span>`:''}</div>
+      <div class="row-line1"><h3 class="row-title">${esc(m.title)}</h3></div>
+      <div class="row-meta"><span>${esc(m.person)}</span><i class="dot-sep"></i><span>${formatDate(m.date)}</span>${an.wordCount?`<i class="dot-sep"></i><span>${an.wordCount} מילים</span>`:''}${(m.tags||[]).slice(0,2).map(t=>pill(t)).join('')}</div>
       ${m.summary?`<p class="row-sum">${esc(m.summary)}</p>`:''}
     </div>
-    <div class="row-end"><span class="case-chip">${ic('doc')} 1 מקרה</span><span class="row-arrow">${ic('fwd')}</span></div>
+    <div class="row-end"><span class="status-chip ${an.version?'':'pending'}">${an.version?'נותח':'ממתין'}</span><span class="row-arrow">${ic('fwd')}</span></div>
   </a>`;
 }
-function followRow(f){
+function followRow(f,opts={}){
   const dl=dueLabel(f.due);
+  const src=f.meetingId&&data.meetings.find(m=>m.id===f.meetingId);
   return`<div class="follow-row ${f.done?'follow-done':''}">
-    <label class="check"><input class="check-input" type="checkbox" data-follow="${f.id}" ${f.done?'checked':''} aria-label="סימון ״${esc(f.title)}״ כהושלמה"><span class="check-box" aria-hidden="true">${ic('checksm')}</span></label>
+    <label class="check"><input class="check-input" type="checkbox" data-follow="${esc(f.id)}" ${f.done?'checked':''} aria-label="סימון ״${esc(f.title)}״ כהושלם"><span class="check-box" aria-hidden="true">${ic('checksm')}</span></label>
     <div class="follow-main">
       <strong>${esc(f.title)}</strong>
-      <div class="follow-meta"><span>${esc(f.person)}</span><i class="dot-sep"></i><span class="${dl.cls}">${dl.t}</span></div>
+      <div class="follow-meta">${opts.noPerson?'':`<a href="#/person/${encodeURIComponent(f.person)}">${esc(f.person)}</a><i class="dot-sep"></i>`}<span class="${f.done?'':dl.cls}">${f.done?'הושלם':dl.t}</span>${src?`<i class="dot-sep"></i><a href="#/case/${esc(src.id)}">מתוך: ${esc(src.title)}</a>`:''}</div>
     </div>
   </div>`;
 }
-function transcriptPanel(m){
-  const an=m.analysis||{};
-  const segs=an.segments||[];
-  const evSet=new Set();
-  ['problem','observations','reasoning','advice','outcomes','followups','contradictions'].forEach(k=>{
-    const arr=k==='problem'?(an.problem?[an.problem]:[]):(an[k]||[]);
-    arr.forEach(it=>it.evidence&&evSet.add(it.evidence.seg));
-  });
-  return`<section class="tr-panel" aria-label="התמלול המקורי">
-    <header class="tr-head">
-      <h3>${ic('doc')} התמלול המקורי</h3>
-      <input class="tr-filter" id="tr-filter" type="search" placeholder="חיפוש בתמלול" aria-label="חיפוש בתמלול">
-    </header>
-    <ol class="tr-list" id="tr-list">
-      ${segs.map((s,i)=>`<li id="ev-${m.id}-${i}" class="tr-line ${evSet.has(i)?'tr-ev':''}">
-        ${(s.time||s.speaker)?`<span class="tr-meta">${s.time?`<span class="mono" dir="ltr">${esc(s.time)}</span>`:''}${s.speaker?`<span class="tr-speaker">${esc(s.speaker)}</span>`:''}</span>`:''}
-        <span class="tr-text">${esc(s.text)}</span>
-        ${evSet.has(i)?'<span class="tr-evtag">עדות</span>':''}
-      </li>`).join('')||'<li class="tr-line tr-empty-line">אין תמלול רשום למקרה זה</li>'}
-    </ol>
-    <footer class="tr-foot"><span>${segs.length} פסקאות</span>${an.speakers&&an.speakers.length?`<span>דוברים: ${an.speakers.map(esc).join(' · ')}</span>`:''}</footer>
-  </section>`;
+function adviceRow({m,a,reason},opts={}){
+  return`<div class="adv-row">
+    <p class="adv-text">${esc(a.text)}</p>
+    ${reason?`<p class="adv-why"><b>למה:</b> ${esc(reason.text)}</p>`:`<p class="adv-why"><b>למה:</b> <span class="muted-note">לא זוהה נימוק מפורש</span></p>`}
+    <div class="adv-foot">
+      ${opts.noPerson?'':`<a href="#/person/${encodeURIComponent(m.person)}">${esc(m.person)}</a><i class="dot-sep"></i>`}
+      <span>${formatDate(m.date)}</span><i class="dot-sep"></i>
+      <a href="#/case/${esc(m.id)}">${esc(m.title)}</a>
+      ${kindTag(a.kind)}
+      ${a.evidence?`<button class="link-btn" type="button" data-src-case="${esc(m.id)}" data-src-seg="${a.evidence.seg}">${ic('quote')}ציון מקור</button>`:''}
+    </div>
+  </div>`;
 }
 function emptyState(title,hint,linkText,route){
   return`<div class="empty"><strong>${esc(title)}</strong>${hint?`<p>${esc(hint)}</p>`:''}${route?`<a class="button primary" href="#${route}">${esc(linkText||'חזרה')}</a>`:''}</div>`;
 }
+function sectionHead(title,link,linkText){return`<div class="section-head"><h2>${title}</h2>${link?`<a class="see-link" href="#${link}">${linkText} ${ic('fwd')}</a>`:''}</div>`}
+
+/* ---------- זמני היום לנתיבות (חישוב אסטרונומי, NOAA) ---------- */
+const PLACE={name:'נתיבות',lat:31.4231,lon:34.5886,tz:'Asia/Jerusalem'};
+const rad=d=>d*Math.PI/180,deg=r=>r*180/Math.PI;
+function sunParams(jd){
+  const T=(jd-2451545)/36525;
+  const L0=((280.46646+T*(36000.76983+T*0.0003032))%360+360)%360;
+  const M=357.52911+T*(35999.05029-0.0001537*T);
+  const e=0.016708634-T*(0.000042037+0.0000001267*T);
+  const C=Math.sin(rad(M))*(1.914602-T*(0.004817+0.000014*T))+Math.sin(rad(2*M))*(0.019993-0.000101*T)+Math.sin(rad(3*M))*0.000289;
+  const omega=125.04-1934.136*T;
+  const lambda=L0+C-0.00569-0.00478*Math.sin(rad(omega));
+  const eps0=23+(26+(21.448-T*(46.815+T*(0.00059-T*0.001813)))/60)/60;
+  const eps=eps0+0.00256*Math.cos(rad(omega));
+  const decl=deg(Math.asin(Math.sin(rad(eps))*Math.sin(rad(lambda))));
+  const y=Math.tan(rad(eps/2))**2;
+  const eqt=4*deg(y*Math.sin(2*rad(L0))-2*e*Math.sin(rad(M))+4*e*y*Math.sin(rad(M))*Math.cos(2*rad(L0))-0.5*y*y*Math.sin(4*rad(L0))-1.25*e*e*Math.sin(2*rad(M)));
+  return{decl,eqt};
+}
+// דקות UTC מחצות לאירוע: השמש בגובה alt מעלות, בזריחה (dir=-1) או בשקיעה (dir=1). dir=0 = חצות היום.
+function solarMinutes(y,mo,d,alt,dir,lat,lon){
+  const jd0=Date.UTC(y,mo-1,d)/864e5+2440587.5;
+  let minutes=720-4*lon;
+  for(let i=0;i<3;i++){
+    const{decl,eqt}=sunParams(jd0+minutes/1440);
+    const noon=720-4*lon-eqt;
+    if(dir===0){minutes=noon;continue}
+    const cosH=(Math.sin(rad(alt))-Math.sin(rad(lat))*Math.sin(rad(decl)))/(Math.cos(rad(lat))*Math.cos(rad(decl)));
+    if(cosH<-1||cosH>1)return null;
+    minutes=noon+dir*4*deg(Math.acos(cosH));
+  }
+  return minutes;
+}
+function localYMD(date,tz){
+  const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date).map(x=>[x.type,x.value]));
+  return[+p.year,+p.month,+p.day];
+}
+function zmanimFor(date=new Date(),place=PLACE){
+  const[y,mo,d]=localYMD(date,place.tz);
+  const base=Date.UTC(y,mo-1,d);
+  const at=(alt,dir)=>{const m=solarMinutes(y,mo,d,alt,dir,place.lat,place.lon);return m==null?null:new Date(base+m*6e4)};
+  const sunrise=at(-0.833,-1),sunset=at(-0.833,1);
+  const hour=(sunset-sunrise)/12;
+  return[
+    {k:'alot',label:'עלות השחר',t:at(-16.1,-1)},
+    {k:'sunrise',label:'הנץ החמה',t:sunrise},
+    {k:'shma',label:'סוף זמן ק״ש (גר״א)',t:new Date(+sunrise+3*hour)},
+    {k:'tfila',label:'סוף זמן תפילה (גר״א)',t:new Date(+sunrise+4*hour)},
+    {k:'chatzot',label:'חצות היום',t:at(0,0)},
+    {k:'sunset',label:'שקיעה',t:sunset},
+    {k:'tzeit',label:'צאת הכוכבים',t:at(-8.5,1)}
+  ];
+}
+function gematria(n){
+  const H=[[400,'ת'],[300,'ש'],[200,'ר'],[100,'ק'],[90,'צ'],[80,'פ'],[70,'ע'],[60,'ס'],[50,'נ'],[40,'מ'],[30,'ל'],[20,'כ'],[10,'י'],[9,'ט'],[8,'ח'],[7,'ז'],[6,'ו'],[5,'ה'],[4,'ד'],[3,'ג'],[2,'ב'],[1,'א']];
+  let s='';n=n%1000;
+  while(n>0){
+    if(n===15){s+='טו';break}if(n===16){s+='טז';break}
+    for(const[v,l]of H)if(n>=v){s+=l;n-=v;break}
+  }
+  return s.length>1?s.slice(0,-1)+'״'+s.slice(-1):s+'׳';
+}
+function hebrewDate(date=new Date()){
+  try{
+    const p=Object.fromEntries(new Intl.DateTimeFormat('he-u-ca-hebrew',{day:'numeric',month:'long',year:'numeric',timeZone:PLACE.tz}).formatToParts(date).map(x=>[x.type,x.value]));
+    return gematria(+p.day)+' ב'+p.month+' '+gematria(+p.year);
+  }catch{return''}
+}
+function zmanimCard(){
+  const now=new Date();
+  const fmt=new Intl.DateTimeFormat('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:PLACE.tz});
+  const list=zmanimFor(now);
+  const next=list.find(z=>z.t&&z.t>now);
+  return`<section class="ctx-card" id="zmanim" aria-label="זמני היום">
+    <h2>זמני היום · ${PLACE.name}</h2>
+    <p class="zm-date">${esc(hebrewDate(now))}</p>
+    <p class="zm-greg">${new Intl.DateTimeFormat('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:PLACE.tz}).format(now)}</p>
+    <ul class="zm-list">${list.map(z=>`<li class="${z===next?'zm-next':z.t&&z.t<now?'zm-past':''}"><span>${z.label}</span><span>${z.t?fmt.format(z.t):'—'}</span></li>`).join('')}</ul>
+    <p class="zm-note">חישוב אסטרונומי בגובה פני הים. להלכה יש לבדוק בלוח מוסמך.</p>
+  </section>`;
+}
 
 /* ---------- מסכים ---------- */
 function homeView(){
-  const h=new Date().getHours();
-  const greet=h<5?'לילה טוב':h<12?'בוקר טוב':h<18?'צהריים טובים':'ערב טוב';
-  const open=data.followups.filter(f=>!f.done).sort((a,b)=>a.due<b.due?-1:1);
-  const overdue=open.filter(f=>f.due<todayISO()).length;
+  const open=data.followups.filter(f=>!f.done).sort((a,b)=>(a.due||'9').localeCompare(b.due||'9'));
+  const overdue=open.filter(f=>f.due&&f.due<todayISO()).length;
   const examples=[
-    {q:'דניאל עצה',label:'מה ייעצתי לדניאל בפגישה האחרונה ולמה?'},
-    {q:'עקרונות זוגי',label:'איזה עקרונות חוזרים בייעוץ זוגי?'},
-    {q:'גבול משפחה',label:'מקרים על גבולות מול המשפחה'},
-    {q:'פחד עבודה',label:'מה אמרתי לאנשים שפחדו לעזוב עבודה?'}
+    {q:'דניאל עצה',label:'מה ייעצתי לדניאל ולמה?'},
+    {q:'מריבות בזוגיות',label:'מריבות בזוגיות'},
+    {q:'גבולות מול ההורים',label:'גבולות מול ההורים'},
+    {q:'פחד לעזוב עבודה',label:'פחד לעזוב עבודה'}
   ];
-  const topPrinciples=[...data.principles].sort((a,b)=>b.confidence-a.confidence).slice(0,3);
+  const adv=allAdvice().slice(0,3);
   return`
   <section class="hero">
-    <h2 class="hero-q">מה תרצה לחדש היום?</h2>
+    <h2 class="hero-q">על מי או על מה מדברים היום?</h2>
     <form class="hero-search" id="hero-search" role="search">
-      <input name="q" type="search" placeholder='שאלה חופשית: ״מה אמרתי בעבר על גבולות מול המשפחה?״' autocomplete="off" aria-label="חיפוש במאגר">
+      <input name="q" type="search" placeholder="שם, נושא או שאלה חופשית" autocomplete="off" aria-label="חיפוש במאגר">
       <button class="button primary" type="submit" aria-label="חיפוש">${ic('search')}</button>
     </form>
     <div class="example-row">${examples.map(e=>`<button class="example" type="button" data-query="${esc(e.q)}">${esc(e.label)}</button>`).join('')}</div>
   </section>
-  <div class="meta-strip">
-    <a href="#recordings"><strong>${data.meetings.length}</strong> פגישות במאגר</a>
-    <a href="#people"><strong>${data.people.length}</strong> אנשים</a>
-    <a href="#principles"><strong>${data.principles.length}</strong> עקרונות מועמדים</a>
-    <a href="#followups" class="${overdue?'ms-alert':''}"><strong>${open.length}</strong> מעקבים פתוחים${overdue?` · <span class="ms-overdue">${overdue} מעבר למועד</span>`:''}</a>
+  <div class="stat-strip">
+    <a href="#recordings"><strong>${data.meetings.length}</strong> הקלטות</a>
+    <a href="#people"><strong>${allPeople().length}</strong> אנשים</a>
+    <a href="#advice"><strong>${allAdvice().length}</strong> עצות מתועדות</a>
+    <a href="#followups"><strong>${open.length}</strong> מעקבים פתוחים${overdue?` · <span class="overdue">${overdue} באיחור</span>`:''}</a>
   </div>
-  <div class="grid-two">
-    <section>
-      <div class="section-head"><h2>דורש מעקב</h2><a class="see-link" href="#followups">לכל המעקבים ${ic('fwd')}</a></div>
-      <div class="panel panel-flush">
-        ${open.length?open.slice(0,4).map(followRow).join(''):emptyState('הכול טופל','אין מעקבים פתוחים כרגע.')}
-      </div>
+  <div class="stack">
+    <section>${sectionHead('דורש מעקב','followups','כל המעקבים')}
+      <div class="panel">${open.length?open.slice(0,5).map(f=>followRow(f)).join(''):emptyState('הכול טופל','אין מעקבים פתוחים.')}</div>
     </section>
-    <section>
-      <div class="section-head"><h2>פגישות אחרונות</h2><a class="see-link" href="#recordings">כל ההקלטות ${ic('fwd')}</a></div>
-      <div class="panel panel-flush">
-        ${[...data.meetings].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,3).map(meetingRow).join('')}
-      </div>
-      <div class="section-head" style="margin-top:26px"><h2>עקרונות עם ביטחון גבוה</h2><a class="see-link" href="#principles">כל העקרונות ${ic('fwd')}</a></div>
-      <div class="panel panel-flush">
-        ${topPrinciples.map(p=>`<a class="row principle-mini" href="#/principle/${p.id}">
-          <div class="row-main"><div class="row-line1"><h3 class="row-title">${esc(p.title)}</h3></div>
-          <div class="row-meta">${confHtml(p.confidence)}</div></div>
-          <span class="row-arrow">${ic('fwd')}</span>
-        </a>`).join('')}
-      </div>
+    <section>${sectionHead('הקלטות אחרונות','recordings','כל ההקלטות')}
+      <div class="panel">${[...data.meetings].sort(byDateDesc).slice(0,4).map(meetingRow).join('')||emptyState('אין הקלטות עדיין','')}</div>
+    </section>
+    <section>${sectionHead('עצות אחרונות','advice','כל העצות')}
+      <div class="panel">${adv.length?adv.map(x=>adviceRow(x)).join(''):emptyState('אין עצות מתועדות','')}</div>
     </section>
   </div>`;
 }
 
 function recordingsView(){
-  const sorted=[...data.meetings].sort((a,b)=>b.date.localeCompare(a.date));
+  const f=navState.filters.recordings||'';
+  const person=navState.filters.recPerson||'';
+  const people=allPeople().map(p=>p.name);
+  return`<div class="page-tools">
+    <input id="filter-recordings" type="search" value="${esc(f)}" placeholder="סינון לפי כותרת, אדם או תוכן" aria-label="סינון הקלטות">
+    <select id="filter-rec-person" aria-label="סינון לפי אדם"><option value="">כל האנשים</option>${people.map(n=>`<option ${n===person?'selected':''} value="${esc(n)}">${esc(n)}</option>`).join('')}</select>
+    <button class="button primary" id="inline-import" type="button">${ic('plus')} הקלטה חדשה</button>
+  </div><div id="recordings-list">${recordingsList(f,person)}</div>`;
+}
+function recordingsList(f,person){
+  const q=prepQuery(f);
+  const ms=[...data.meetings].sort(byDateDesc).filter(m=>(!person||m.person===person)&&(!q.tokens.length||scoreRecord(q,[[m.title,1],[m.person,1],[m.summary,1],[(m.tags||[]).join(' '),1],[m.transcript,1],[m.plaud,1]])>0));
+  if(!data.meetings.length)return`<div class="panel"><div class="empty"><strong>אין הקלטות עדיין</strong><p>ייבוא תמלול ראשון יתחיל לבנות את המאגר.</p><button class="button primary" id="empty-import" type="button">${ic('plus')} ייבוא תמלול</button></div></div>`;
+  if(!ms.length)return`<div class="panel">${emptyState('לא נמצאו הקלטות','אפשר לנסות מילה אחרת או לנקות את הסינון.')}</div>`;
   const groups=new Map();
-  for(const m of sorted){
-    const k=new Date(m.date+'T12:00:00').toLocaleDateString('he-IL',{month:'long',year:'numeric'});
+  for(const m of ms){
+    const k=parseDay(m.date).toLocaleDateString('he-IL',{month:'long',year:'numeric'});
     if(!groups.has(k))groups.set(k,[]);
     groups.get(k).push(m);
   }
-  const body=groups.size?[...groups.entries()].map(([k,ms])=>`
-    <h2 class="month-sep">${k}</h2>
-    <div class="panel panel-flush">${ms.map(meetingRow).join('')}</div>`).join('')
-    :`<div class="panel"><div class="empty"><strong>אין הקלטות עדיין</strong><p>ייבאו תמלול ראשון כדי להתחיל לבנות את המאגר.</p><button class="button primary" id="empty-import" type="button">${ic('plus')} ייבוא תמלול</button></div></div>`;
-  return`<div class="page-tools">
-    <input id="filter-recordings" type="search" placeholder="סינון לפי שם, אדם או תוכן…" aria-label="סינון הקלטות">
-    <button class="button primary" id="inline-import" type="button">${ic('plus')} תמלול חדש</button>
-  </div><div id="recordings-list">${body}</div>`;
+  return[...groups.entries()].map(([k,g])=>`<h2 class="month-sep">${esc(k)}</h2><div class="panel">${g.map(meetingRow).join('')}</div>`).join('');
 }
 
 function caseView(id){
   const m=data.meetings.find(x=>x.id===id);
-  if(!m)return emptyState('המקרה לא נמצא','ייתכן שהקישור שונה או שהמקרה נמחק.','חזרה להקלטות','recordings');
+  if(!m)return emptyState('ההקלטה לא נמצאה','ייתכן שהקישור השתנה או שההקלטה נמחקה.','חזרה להקלטות','recordings');
   const an=m.analysis||{};
-  const rel=relatedPrinciples(m);
+  const tab=navState.caseTab[id]||'knowledge';
+  const nItems=(an.problem?1:0)+['observations','reasoning','advice','outcomes','results','followups','contradictions'].reduce((s,k)=>s+(an[k]||[]).length,0);
+  const tabs=[['knowledge','ידע שחולץ',nItems],['source','תמלול מקור',(an.segments||[]).length],['plaud','ניתוח PLAUD',m.plaud?'':'אין']];
   return`<div class="detail">
     <a class="crumb" href="#recordings">${ic('back')} הקלטות</a>
-    <header class="case-head">
-      <h2 class="case-title">${esc(m.title)}</h2>
-      <div class="case-meta">
+    <header class="d-head">
+      <h2 class="d-title">${esc(m.title)}</h2>
+      <div class="d-meta">
         <a class="meta-link" href="#/person/${encodeURIComponent(m.person)}">${ic('users')} ${esc(m.person)}</a>
         <i class="dot-sep"></i><span>${formatFull(m.date)}</span>
-        <i class="dot-sep"></i><span>מקור: הקלטה</span>
         ${an.timeRange?`<i class="dot-sep"></i><span class="mono" dir="ltr">${esc(an.timeRange)}</span>`:''}
         ${(m.tags||[]).map(t=>pill(t)).join('')}
       </div>
-      ${m.summary?`<p class="case-summary">${esc(m.summary)}</p>`:''}
+      ${m.summary?`<p class="d-summary">${esc(m.summary)}</p>`:''}
     </header>
-    <div class="case-grid">
-      <div class="case-main">
-        <p class="section-note">שרשרת ההסקה — מה זוהה בפגישה, מה הומלץ, ולמה. כל פריט מקושר לציונו המקורי בתמלול.</p>
-        <div class="chain">
-          ${stepHtml(1,'הבעיה',an.problem?[an.problem]:[],{mid:m.id,empty:'לא זוהה ניסוח של הבעיה בתמלול'})}
-          ${stepHtml(2,'תצפיות',an.observations,{mid:m.id,empty:'לא זוהו תצפיות נוספות'})}
-          ${stepHtml(3,'הנימוק',an.reasoning,{mid:m.id,empty:'לא זוהה נימוק מפורש — אפשר לנסח אותו ידנית'})}
-          ${stepHtml(4,'העצה',an.advice,{mid:m.id,cls:'step-advice',empty:'לא זוהה המלצה בפגישה זו'})}
-          ${stepHtml(5,'התוצאה הצפויה',an.outcomes,{mid:m.id,empty:'לא נסמנה תוצאה מוגדרת'})}
-          ${stepHtml(6,'מעקבים שנוצרו',an.followups,{mid:m.id,empty:'לא נוצרו מעקבים מפגישה זו'})}
-          <section class="chain-step">
-            <div class="step-head"><span class="step-num" aria-hidden="true">!</span><h3 class="step-label">ניגודויות וחריגים</h3></div>
-            <div class="step-body">
-              ${an.contradictions.length?an.contradictions.map(it=>itemHtml(it,m.id)).join(''):'<p class="step-empty step-empty-soft">לא זוהה סתירה לעקרונות קיימים</p>'}
-            </div>
-          </section>
-        </div>
-        ${rel.length?`<section class="case-related">
-          <h3 class="rel-title">עקרונות שעשויים להתייחס למקרה</h3>
-          <div class="rel-list">${rel.map(({principle:p,strength})=>`
-            <a class="rel-item" href="#/principle/${p.id}"><span class="rel-badge">השערה</span><strong>${esc(p.title)}</strong><span class="rel-sig">חפיפה ${strength}</span></a>`).join('')}</div>
-          <p class="rel-note">הקישור נוצר בהוראה טקסטואלית (rule-based) ואינו קשר שנמדד.</p>
-        </section>`:''}
+    <div class="tabs" role="tablist">${tabs.map(([k,l,n])=>`<button class="tab" role="tab" type="button" aria-selected="${tab===k}" data-case-tab="${k}">${l}${n!==''?` <span class="tab-n">${n}</span>`:''}</button>`).join('')}</div>
+    <div role="tabpanel">${tab==='source'?sourcePanel(m):tab==='plaud'?plaudPanel(m):knowledgePanel(m)}</div>
+  </div>`;
+}
+function knowledgePanel(m){
+  const an=m.analysis||{};
+  return`<p class="section-note">כל פריט נשלף מהתמלול ומקושר למשפט המקורי. „למה?” מציג את המשפט עצמו.</p>
+  <div class="chain">
+    ${stepHtml('הבעיה',an.problem?[an.problem]:[],m.id,{empty:'לא זוהה ניסוח מפורש של הבעיה'})}
+    ${stepHtml('תצפיות',an.observations,m.id,{empty:'לא זוהו תצפיות'})}
+    ${stepHtml('העצה',an.advice,m.id,{cls:'step-advice',empty:'לא זוהתה עצה או החלטה'})}
+    ${stepHtml('הנימוק',an.reasoning,m.id,{empty:'לא זוהה נימוק מפורש'})}
+    ${stepHtml('התוצאה המצופה',an.outcomes,m.id,{empty:'לא נאמרה מטרה מפורשת'})}
+    ${stepHtml('מה קרה בפועל',an.results,m.id,{empty:'לא דווח על תוצאה של עצה קודמת'})}
+    ${stepHtml('מעקב',an.followups,m.id,{empty:'לא נקבע מעקב'})}
+    ${stepHtml('חריגים',an.contradictions,m.id,{empty:'לא זוהה חריג'})}
+  </div>`;
+}
+function sourcePanel(m){
+  const an=m.analysis||{};
+  const segs=an.segments||[];
+  const evSet=new Set();
+  ['observations','reasoning','advice','outcomes','results','followups','contradictions'].forEach(k=>(an[k]||[]).forEach(it=>it.evidence&&evSet.add(it.evidence.seg)));
+  if(an.problem)evSet.add(an.problem.evidence.seg);
+  return`<div class="src-tools">
+    <input id="tr-filter" type="search" placeholder="חיפוש בתוך התמלול" aria-label="חיפוש בתמלול">
+    <span class="src-count">${segs.length} משפטים${an.speakers?.length?' · דוברים: '+an.speakers.map(esc).join(', '):''}</span>
+  </div>
+  <div class="panel panel-pad">
+    <ol class="tr-list" id="tr-list">
+    ${segs.map((s,i)=>`<li id="ev-${esc(m.id)}-${i}" class="tr-line ${evSet.has(i)?'tr-ev':''}">
+      <span class="tr-meta">${s.time?`<span class="mono" dir="ltr">${esc(s.time)}</span>`:''}${s.speaker?`<span class="tr-speaker">${esc(s.speaker)}</span>`:''}</span>
+      <span class="tr-text">${esc(s.text)}</span>
+    </li>`).join('')||'<li class="src-empty">אין תמלול שמור להקלטה זו</li>'}
+    </ol>
+  </div>`;
+}
+function plaudPanel(m){
+  return`<p class="section-note">הניתוח כפי ש־PLAUD הפיק אותו, בלי עריכה.</p>
+  <div class="panel panel-pad">${m.plaud?`<p class="plaud-text">${esc(m.plaud)}</p>`:'<p class="src-empty">לא נשמר ניתוח PLAUD להקלטה זו</p>'}</div>`;
+}
+
+function peopleView(){
+  const f=navState.filters.people||'';
+  return`<div class="page-tools"><input id="filter-people" type="search" value="${esc(f)}" placeholder="חיפוש אדם" aria-label="חיפוש אדם"></div>
+  <div class="panel" id="people-list">${peopleList(f)}</div>`;
+}
+function peopleList(f){
+  const q=prepQuery(f);
+  const ps=allPeople().filter(p=>!q.tokens.length||scoreRecord(q,[[p.name,1],[p.topic,1]])>0);
+  if(!ps.length)return emptyState('לא נמצא','');
+  return ps.map(p=>{
+    const openF=data.followups.filter(x=>x.person===p.name&&!x.done).length;
+    return`<a class="row" href="#/person/${encodeURIComponent(p.name)}">
+      <div class="row-main">
+        <div class="row-line1"><h3 class="row-title">${esc(p.name)}</h3>${openF?pill(openF+' מעקבים פתוחים','alert'):''}</div>
+        <div class="row-meta"><span>${esc(p.topic||'ללא נושא')}</span><i class="dot-sep"></i><span>${p.count} פגישות</span>${p.last?`<i class="dot-sep"></i><span>אחרונה: ${formatDate(p.last)}</span>`:''}</div>
       </div>
-      <aside class="case-side">${transcriptPanel(m)}</aside>
+      <span class="row-end"><span class="row-arrow">${ic('fwd')}</span></span>
+    </a>`;
+  }).join('');
+}
+
+function personView(name){
+  const p=allPeople().find(x=>x.name===name);
+  if(!p)return emptyState('האדם לא נמצא','ייתכן שהשם השתנה.','חזרה לאנשים','people');
+  const ms=meetingsOf(name);
+  const advice=allAdvice().filter(x=>x.m.person===name);
+  const latest=ms[0],prev=ms[1];
+  const openF=data.followups.filter(f=>f.person===name&&!f.done).sort((a,b)=>(a.due||'9').localeCompare(b.due||'9'));
+  let delta='';
+  if(latest){
+    const la=latest.analysis||{},pa=prev?.analysis||{};
+    const rows=[];
+    rows.push(['פגישה אחרונה',`<a href="#/case/${esc(latest.id)}">${esc(latest.title)}</a><small>${formatFull(latest.date)}</small>`]);
+    if(prev&&pa.advice?.length)rows.push(['העצה בפגישה הקודמת',`${esc(pa.advice[0].text)}<small>${formatDate(prev.date)}</small>`]);
+    rows.push(['מה דווח מאז',la.results?.length?la.results.map(r=>esc(r.text)).join('<br>'):'<span class="muted-note">לא דווח על תוצאה</span>']);
+    if(la.problem)rows.push(['הבעיה כעת',esc(la.problem.text)]);
+    if(la.advice?.length)rows.push(['העצה האחרונה',esc(la.advice[0].text)+(reasonFor(la,la.advice[0])?`<small>למה: ${esc(reasonFor(la,la.advice[0]).text)}</small>`:'')]);
+    rows.push(['פתוח',openF.length?esc(openF[0].title)+`<small>${dueLabel(openF[0].due).t}</small>`:'<span class="muted-note">אין מעקב פתוח</span>']);
+    delta=`<section>${sectionHead(prev?'מה השתנה מאז הפגישה הקודמת':'מה ידוע עד עכשיו')}<dl class="panel delta">${rows.map(([k,v])=>`<div class="delta-item"><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl></section>`;
+  }
+  return`<div class="detail">
+    <a class="crumb" href="#people">${ic('back')} אנשים</a>
+    <header class="d-head">
+      <h2 class="d-title">${esc(name)}</h2>
+      <div class="d-meta">${p.topic?pill(p.topic,'accent'):''}<span>${ms.length} פגישות</span>${p.first?`<i class="dot-sep"></i><span>מ־${formatDate(p.first)} עד ${formatDate(p.last)}</span>`:''}</div>
+    </header>
+    <div class="stack">
+      ${delta}
+      <section>${sectionHead('כל העצות שניתנו')}<div class="panel">${advice.length?advice.map(x=>adviceRow(x,{noPerson:true})).join(''):emptyState('אין עצות מתועדות','')}</div></section>
+      <section>${sectionHead('ציר זמן')}<div class="timeline">${ms.map(m=>`<a class="tl-item" href="#/case/${esc(m.id)}"><span class="tl-date">${formatFull(m.date)}</span><strong>${esc(m.title)}</strong>${m.summary?`<p>${esc(m.summary)}</p>`:''}</a>`).join('')||'<p class="muted-note">אין פגישות רשומות</p>'}</div></section>
     </div>
   </div>`;
 }
 
-function peopleView(){
-  const rows=data.people.map(p=>{
-    const ms=data.meetings.filter(m=>m.person===p.name);
-    const openF=data.followups.filter(f=>f.person===p.name&&!f.done).length;
-    return`<a class="row person-row" href="#/person/${encodeURIComponent(p.name)}">
-      <div class="row-main">
-        <div class="row-line1"><h3 class="row-title">${esc(p.name)}</h3>${openF?pill(openF+' מעקבים פתוחים','alert'):''}</div>
-        <div class="row-meta"><span>נושא מרכזי: ${esc(p.topic||'—')}</span><i class="dot-sep"></i><span>אחרונה: ${esc(p.last||'—')}</span></div>
-      </div>
-      <div class="row-end"><span class="case-chip">${ms.length} פגישות</span><span class="row-arrow">${ic('fwd')}</span></div>
-    </a>`;
-  }).join('');
-  return`<div class="page-tools"><input id="filter-people" type="search" placeholder="חיפוש אדם…" aria-label="חיפוש אדם"></div>
-  <div class="panel panel-flush" id="people-list">${rows||emptyState('אין אנשים במאגר','אנשים נוספים אוטומטית עם ייבוא תמלול.')}</div>`;
+function adviceView(){
+  const f=navState.filters.advice||'';
+  const person=navState.filters.advPerson||'';
+  return`<p class="section-note">כל עצה עם הנימוק שלה, האדם, ההקלטה והמשפט המקורי.</p>
+  <div class="page-tools">
+    <input id="filter-advice" type="search" value="${esc(f)}" placeholder="סינון עצות" aria-label="סינון עצות">
+    <select id="filter-adv-person" aria-label="סינון לפי אדם"><option value="">כל האנשים</option>${allPeople().map(p=>`<option ${p.name===person?'selected':''} value="${esc(p.name)}">${esc(p.name)}</option>`).join('')}</select>
+  </div>
+  <div class="panel" id="advice-list">${adviceList(f,person)}</div>`;
+}
+function adviceList(f,person){
+  const q=prepQuery(f);
+  const list=allAdvice().filter(x=>(!person||x.m.person===person)&&(!q.tokens.length||scoreRecord(q,[[x.a.text,1],[x.reason?.text,1],[x.m.title,1],[(x.m.tags||[]).join(' '),1]])>0));
+  return list.length?list.map(x=>adviceRow(x)).join(''):emptyState('לא נמצאו עצות','');
 }
 
-function personView(name){
-  const p=data.people.find(x=>x.name===name);
-  const ms=[...data.meetings].filter(m=>m.person===name).sort((a,b)=>b.date.localeCompare(a.date));
-  const topic=p?.topic||(ms[0]?.tags||[])[0]||'';
-  const openF=data.followups.filter(f=>f.person===name&&!f.done).sort((a,b)=>a.due<b.due?-1:1);
-  const doneF=data.followups.filter(f=>f.person===name&&f.done);
-  const tags=tagCounts(ms).slice(0,5);
-  const relSet=new Map();
-  for(const m of ms)for(const{principle:pr,strength}of relatedPrinciples(m,2))relSet.set(pr.id,(relSet.get(pr.id)||0)+strength);
-  const rel=[...relSet.entries()].sort((a,b)=>b[1]-a[1]).slice(0,4).map(([id])=>data.principles.find(x=>x.id===id)).filter(Boolean);
-  const adviceHistory=ms.flatMap(m=>{
-    const an=m.analysis||{};
-    return(an.advice||[]).slice(0,2).map(a=>({m,a,reason:(an.reasoning||[])[0],date:m.date}));
-  });
-  if(!p&&ms.length===0)return emptyState('האדם לא נמצא','ייתכן שהשם השתנה.','חזרה לאנשים','people');
-  return`<div class="detail">
-    <a class="crumb" href="#people">${ic('back')} אנשים</a>
-    <header class="case-head">
-      <h2 class="case-title">${esc(name)}</h2>
-      <div class="case-meta">
-        ${topic?pill(topic):''}
-        <i class="dot-sep"></i><span>${ms.length} פגישות ברצף</span>
-        ${p?.last?`<i class="dot-sep"></i><span>אחרונה: ${esc(p.last)}</span>`:''}
-      </div>
-      <p class="case-summary">הזיכרון לפני הפגישה הבאה — מה נאמר, מה הומלץ, מה עדיין פתוח.</p>
-    </header>
-    <div class="person-grid">
-      <section class="person-main">
-        <div class="section-head"><h2>מה נאמר בפגישות קודמות</h2></div>
-        <div class="panel panel-flush">
-          ${adviceHistory.length?adviceHistory.map(({m,a,reason,date})=>`
-            <a class="row advice-row" href="#/case/${m.id}">
-              <div class="row-main">
-                <div class="row-line1"><h3 class="row-title">${esc(m.title)}</h3><span class="mono ad-date" dir="ltr">${date}</span></div>
-                <p class="ad-text">${esc(a.text)}</p>
-                ${reason?`<p class="ad-why">${ic('quote')} נימוק: ${esc(reason.text)}</p>`:''}
-                <div class="row-meta" style="margin-top:7px"><span class="tag ${a.kind==='explicit'?'tag-exp':'tag-inf'}">${a.kind==='explicit'?'מופיע במפורש':'נלמד מן הטקסט'}</span>${confHtml(a.confidence)}</div>
-              </div>
-              <span class="row-arrow">${ic('fwd')}</span>
-            </a>`).join('')
-          :emptyState('אין עצות רשומות','ככל שתיוודו תמלולים — היסטוריה תיבנה אוטומטית.')}
-        </div>
-      </section>
-      <aside class="person-side">
-        <section>
-          <div class="section-head"><h2>מעקבים פתוחים</h2></div>
-          <div class="panel panel-flush">
-            ${openF.length?openF.map(followRow).join(''):'<div class="empty" style="padding:26px"><strong>הכול סגור</strong>אין משימות פתוחות.</div>'}
-            ${doneF.length?`<p class="done-note">· ${doneF.length} הושלמו בעבר</p>`:''}
-          </div>
-        </section>
-        <section>
-          <div class="section-head"><h2>דפוסי בעיות</h2></div>
-          <div class="panel">
-            ${tags.length?`<div class="tag-cloud">${tags.map(([t,n])=>pill(t+(n>1?' · '+n:''),'accent')).join(' ')}</div>`:'<p class="muted-note">אין תגים.</p>'}
-          </div>
-        </section>
-        <section>
-          <div class="section-head"><h2>עקרונות רלוונטיים</h2></div>
-          <div class="panel panel-flush">
-            ${rel.length?rel.map(pr=>`<a class="row principle-mini" href="#/principle/${pr.id}"><div class="row-main"><div class="row-line1"><h3 class="row-title">${esc(pr.title)}</h3></div><div class="row-meta">${confHtml(pr.confidence)}</div></div><span class="row-arrow">${ic('fwd')}</span></a>`).join(''):'<p class="muted-note" style="padding:14px">לא זוהו עקרונות מחפצים לתיק זה.</p>'}
-          </div>
-        </section>
-      </aside>
-    </div>
-    <section style="margin-top:30px">
-      <div class="section-head"><h2>ציר הזמן</h2></div>
-      <div class="timeline">
-        ${ms.map(m=>`<a class="tl-item" href="#/case/${m.id}"><span class="tl-dot" aria-hidden="true"></span>
-          <div class="tl-body"><span class="tl-date">${formatDate(m.date)}</span><strong>${esc(m.title)}</strong>
-          ${m.summary?`<p>${esc(m.summary)}</p>`:''}</div><span class="row-arrow">${ic('fwd')}</span></a>`).join('')||emptyState('אין פגישות רשומות','—','—','people')}
-      </div>
+function contradictionsView(){
+  const ex=allExceptions(),ch=adviceChanges();
+  return`<p class="section-note">כאן מופיעים מקרים שדורשים בדיקה שלך: חריגים שנאמרו בפגישות, ועצות שהשתנו אצל אותו אדם. המערכת לא מכריעה אם זו סתירה אמיתית.</p>
+  <div class="stack">
+    <section>${sectionHead('חריגים שנאמרו בפגישות')}
+      <div class="panel">${ex.length?ex.map(({m,c})=>`<div class="adv-row"><p class="adv-text">${esc(c.text)}</p>
+        <div class="adv-foot"><a href="#/person/${encodeURIComponent(m.person)}">${esc(m.person)}</a><i class="dot-sep"></i><span>${formatDate(m.date)}</span><i class="dot-sep"></i><a href="#/case/${esc(m.id)}">${esc(m.title)}</a>
+        <button class="link-btn" type="button" data-src-case="${esc(m.id)}" data-src-seg="${c.evidence.seg}">${ic('quote')}ציון מקור</button></div></div>`).join(''):emptyState('לא זוהו חריגים','')}</div>
+    </section>
+    <section>${sectionHead('עצות שהשתנו לאורך זמן')}
+      <div class="panel">${ch.length?ch.map(x=>`<div class="adv-row">
+        <div class="adv-foot" style="margin-top:0"><a href="#/person/${encodeURIComponent(x.person)}">${esc(x.person)}</a></div>
+        <div class="pair">
+          <div><small>קודם · <a href="#/case/${esc(x.earlier.id)}">${formatDate(x.earlier.date)}</a></small><p>${esc(x.a1.text)}</p></div>
+          <div><small>אחר כך · <a href="#/case/${esc(x.later.id)}">${formatDate(x.later.date)}</a></small><p>${esc(x.a2.text)}</p></div>
+        </div></div>`).join(''):emptyState('אין עדיין רצף עצות לאותו אדם','')}</div>
     </section>
   </div>`;
 }
 
 function principlesView(){
   const cards=data.principles.map(p=>{
-    const academic=p.type==='academic';
-    return`<a class="principle-card" href="#/principle/${p.id}">
-      <span class="p-type ${academic?'academic':'practice'}">${academic?'הקבילה מחקרית ש־AI מציגה':'עיקרון מועמד מן הפרקטיקה'}</span>
-      <h3>${esc(p.title)}</h3>
-      <p>${esc(p.description)}</p>
-      <div class="p-foot">
-        <span>${p.uses} מקרים</span><span>${p.positive} תוצאות חיוביות</span>
-        <span class="conf-wrap"><span class="meter" aria-hidden="true"><i style="width:${p.confidence}%"></i></span><span class="mono">${p.confidence}%</span></span>
-      </div>
+    const n=linkedCases(p).length;
+    return`<a class="principle-card" href="#/principle/${esc(p.id)}">
+      <h3>${esc(p.title)}</h3><p>${esc(p.description)}</p>
+      <div class="p-foot">${pill(p.status==='confirmed'?'מאושר':'מועמד',p.status==='confirmed'?'accent':'ev')}<span>${n} מקרים מקושרים</span></div>
     </a>`;
   }).join('');
-  return`<p class="section-note">המערכת מנסחת מועמדים מתוך ההתנהלות שלך בהקלטות. עיקרון מסומן כ„הקבילה מחקרית" הוא רק השוואה שאי־AI מציע — לא בהכרח השיטה שלך.</p>
-  <div class="principle-grid">${cards||emptyState('עדיין אין עקרונות','עקרונות מועמדים נבנים ככל שהמאגר מתרחב.')}</div>`;
+  return`<p class="section-note">עיקרון מועמד הוא ניסוח של דפוס שחוזר בעצות שלך. הקישור למקרים נעשה לפי חפיפת מילים, ולכן הוא השערה עד שתאשר אותו.</p>
+  <div class="principle-grid">${cards||emptyState('עדיין אין עקרונות','')}</div>`;
 }
-
 function principleView(id){
   const p=data.principles.find(x=>x.id===id);
-  if(!p)return emptyState('העיקרון לא נמצא','—','חזרה לעקרונות','principles');
-  const academic=p.type==='academic';
-  const cases=(p.cases||[]).map(cid=>data.meetings.find(m=>m.id===cid)).filter(Boolean);
-  const near=data.principles.filter(x=>x.id!==p.id).map(x=>{
-    const w=x.title.toLowerCase().split(/\s+/).concat(x.description.toLowerCase().split(/\s+/));
-    const hay=(p.title+' '+p.description).toLowerCase();
-    let s=0;for(const t of w){if(t.length>=3&&!STOP.has(t)&&hay.includes(t))s+=1}
-    return{x,s};
-  }).filter(x=>x.s>0).sort((a,b)=>b.s-a.s).slice(0,3);
-  const sec=(title,body,empty)=>`<section class="panel pr-section"><h3 class="pr-sec-title">${title}</h3>${body||`<p class="step-empty">${empty||'יירשם ככל שהמידע מצטבר'}</p>`}</section>`;
+  if(!p)return emptyState('העיקרון לא נמצא','','חזרה לעקרונות','principles');
+  const cases=linkedCases(p);
+  const exc=cases.flatMap(m=>(m.analysis?.contradictions||[]).map(c=>({m,c})));
+  const near=data.principles.filter(x=>x.id!==p.id).map(x=>({x,s:overlap(x,(p.title+' '+p.description).toLowerCase())})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s).slice(0,3);
+  const sec=(title,body)=>`<section class="panel panel-pad pr-sec"><h3>${title}</h3>${body}</section>`;
   return`<div class="detail">
     <a class="crumb" href="#principles">${ic('back')} עקרונות</a>
-    <div class="pr-detail">
-      <span class="p-type ${academic?'academic':'practice'}" style="margin-bottom:12px">${academic?'הקבילה מחקרית ש־AI מציגה':'עיקרון מועמד שמנוסח מן הפרקטיקה'}</span>
-      <h2 class="case-title">${esc(p.title)}</h2>
-      <p class="pr-desc">${esc(p.description)}</p>
-      <div class="pr-stats">
-        <div class="pr-stat"><span>הופעות</span><strong>${p.uses}</strong></div>
-        <div class="pr-stat"><span>תוצאות חיוביות</span><strong>${p.positive}</strong></div>
-        <div class="pr-stat pr-stat-wide"><span>רמת ביטחון</span><span class="conf-wrap"><span class="meter lg" aria-hidden="true"><i style="width:${p.confidence}%"></i></span><span class="mono">${p.confidence}%</span></span></div>
-      </div>
-      <div class="pr-sections">
-        ${sec('מקרים תומכים',cases.length?`<div class="panel-flush" style="border:0;padding:0">${cases.map(meetingRow).join('')}</div>`:'','הרשימה תתמלא ככל שהניתוח מייחס מקרים לעיקרון')}
-        ${sec('מתי רלוונטי',p.appliesTo?`<p class="muted-note" style="padding:0">${esc(p.appliesTo)}</p>`:'','תיאר את המצבים שבהם העיקרון חל')}
-        ${sec('חריגים וניגודויות',(p.exceptions||[]).map(e=>`<p class="exc-item">${ic('quote')} ${esc(e)}</p>`).join('')||'','לא רשומים חריגים — סמנו כשהעיקרון אינו חל')}
-        ${sec('עקרונות קרובים',near.length?near.map(({x})=>`<a class="rel-item" href="#/principle/${x.id}"><span class="rel-badge">קרוב</span><strong>${esc(x.title)}</strong></a>`).join(''):'','—')}
-        ${sec('התפתחות לאורך זמן',(p.evolution||[]).map(e=>`<div class="tl-item" style="cursor:default"><span class="tl-dot" aria-hidden="true"></span><div class="tl-body"><span class="tl-date">${esc(e.when||formatDate(e.date||todayISO()))}</span><p style="margin:2px 0 0">${esc(e.note||'')}</p></div></div>`).join(''),'העינון יצייר את השינויים בניסוח העיקרון')}
-      </div>
+    <header class="d-head"><h2 class="d-title">${esc(p.title)}</h2><div class="d-meta">${pill(p.status==='confirmed'?'מאושר':'עיקרון מועמד',p.status==='confirmed'?'accent':'ev')}<span>${cases.length} מקרים מקושרים</span></div></header>
+    <p class="p-statement">${esc(p.description)}</p>
+    <div class="pr-sections">
+      ${sec('מקרים מקושרים',cases.length?cases.map(m=>{const a=m.analysis?.advice?.[0];return`<div class="adv-row" style="padding-inline:0"><a class="meta-link" href="#/case/${esc(m.id)}">${esc(m.title)}</a><div class="adv-foot" style="margin-top:3px"><span>${esc(m.person)}</span><i class="dot-sep"></i><span>${formatDate(m.date)}</span></div>${a?`<p class="adv-why">${esc(a.text)}</p>`:''}</div>`}).join(''):'<p class="muted-note">לא נמצאו מקרים עם חפיפה מספקת.</p>')}
+      ${sec('חריגים מתוך המקרים',exc.length||(p.exceptions||[]).length?exc.map(({m,c})=>`<p class="adv-why">״${esc(c.text)}״ · <a href="#/case/${esc(m.id)}">${esc(m.person)}, ${formatDate(m.date)}</a></p>`).join('')+(p.exceptions||[]).map(e=>`<p class="adv-why">${esc(e)}</p>`).join(''):'<p class="muted-note">לא נאמר חריג באף מקרה מקושר.</p>')}
+      ${sec('עקרונות קרובים',near.length?near.map(({x})=>`<p style="margin:0 0 6px"><a class="meta-link" href="#/principle/${esc(x.id)}">${esc(x.title)}</a></p>`).join(''):'<p class="muted-note">אין.</p>')}
     </div>
   </div>`;
 }
 
 function followupsView(){
-  const open=data.followups.filter(f=>!f.done).sort((a,b)=>a.due<b.due?-1:1);
+  const open=data.followups.filter(f=>!f.done).sort((a,b)=>(a.due||'9').localeCompare(b.due||'9'));
   const done=data.followups.filter(f=>f.done);
-  const overdue=open.filter(f=>f.due<todayISO()).length;
-  const byPerson=(arr)=>{
-    const g=new Map();
-    for(const f of arr){if(!g.has(f.person))g.set(f.person,[]);g.get(f.person).push(f)}
-    return[...g.entries()];
-  };
-  const peopleOptions=[...new Set(data.people.map(p=>p.name))];
-  return`
-  <div class="fu-summary">
-    <span><strong>${open.length}</strong> פתוחים</span><i class="dot-sep"></i>
-    <span class="${overdue?'overdue':''}"><strong>${overdue}</strong> מעבר למועד</span><i class="dot-sep"></i>
-    <span><strong>${done.length}</strong> הושלמו</span>
-  </div>
+  const overdue=open.filter(f=>f.due&&f.due<todayISO()).length;
+  const g=new Map();
+  for(const f of open){if(!g.has(f.person))g.set(f.person,[]);g.get(f.person).push(f)}
+  return`<div class="fu-summary"><span><strong>${open.length}</strong> פתוחים</span><i class="dot-sep"></i><span class="${overdue?'overdue':''}"><strong>${overdue}</strong> באיחור</span><i class="dot-sep"></i><span><strong>${done.length}</strong> הושלמו</span></div>
   <form class="panel fu-quick" id="follow-quick">
-    <label>מעקב חדש
-      <div class="fu-quick-row">
-        <select name="person" aria-label="אדם">${peopleOptions.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')}</select>
-        <input name="title" required placeholder="מה לבדוק בפגישה הבאה?">
-        <input name="due" type="date" required value="${todayISO()}">
-        <button class="button primary" type="submit">${ic('plus')} הוספה</button>
-      </div>
-    </label>
+    <p class="fu-quick-title">מעקב חדש</p>
+    <div class="fu-quick-row">
+      <select name="person" aria-label="אדם" required>${allPeople().map(p=>`<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('')}</select>
+      <input name="title" required placeholder="מה לבדוק בפגישה הבאה?" aria-label="תיאור המעקב">
+      <input name="due" type="date" required value="${addDays(todayISO(),7)}" aria-label="תאריך יעד">
+      <button class="button primary" type="submit">${ic('plus')} הוספה</button>
+    </div>
   </form>
-  <div class="fu-groups">
-    ${byPerson(open).map(([name,fs])=>`
-      <section><div class="section-head"><h2>${esc(name)}</h2><span class="fu-count">${fs.length}</span></div>
-      <div class="panel panel-flush">${fs.map(followRow).join('')}</div></section>`).join('')
-    ||emptyState('אין מעקבים פתוחים','מעקבים נוצרים אוטומטית מתמלולים, או ידנית דרך הטופס למעלה.')}
-  </div>
-  ${done.length?`<section style="margin-top:26px"><div class="section-head"><h2>הושלמו</h2></div><div class="panel panel-flush">${done.map(followRow).join('')}</div></section>`:''}`;
+  <div class="stack">
+    ${[...g.entries()].map(([name,fs])=>`<section>${sectionHead(`<a href="#/person/${encodeURIComponent(name)}" style="color:inherit;text-decoration:none">${esc(name)}</a>`)}<div class="panel">${fs.map(f=>followRow(f,{noPerson:true})).join('')}</div></section>`).join('')||`<div class="panel">${emptyState('אין מעקבים פתוחים','מעקבים נוצרים מתוך ההקלטות, או ידנית בטופס.')}</div>`}
+    ${done.length?`<section>${sectionHead('הושלמו')}<div class="panel">${done.map(f=>followRow(f)).join('')}</div></section>`:''}
+  </div>`;
 }
 
 function searchView(q=''){
   const res=searchAll(q);
-  const examples=[
-    {q:'דניאל עצה',label:'מה ייעצתי לדניאל בפגישה הקודמת ולמה?'},
-    {q:'עקרונות זוגי',label:'איזה עקרונות חוזרים בייעוץ זוגי?'},
-    {q:'פחד עבודה',label:'מה אמרתי לאנשים שפחדו לעזוב עבודה?'},
-    {q:'גבול משפחה',label:'מקרים על גבולות מול המשפחה'},
-    {q:'עצה שונה',label:'באילו מקרים נתתי עצה שונה לבעיה דומה?'}
-  ];
-  const groupsHtml=['meeting','person','principle','followup'].filter(k=>res.groups[k].length).map(k=>`
-    <section class="search-group">
-      <h2>${GROUP_LABEL[k]} <span class="sg-count">${res.groups[k].length}</span></h2>
-      ${res.groups[k].map(it=>`<a class="res-row" href="#/${it.route}">
-        <div class="res-line1"><strong>${esc(it.title)}</strong></div>
-        <div class="res-meta">${it.meta}</div>
-        ${it.snippet?`<p class="res-snip">${it.snippet}</p>`:''}
-      </a>`).join('')}
+  const examples=[{q:'דניאל',label:'דניאל'},{q:'מריבות בזוגיות',label:'מריבות בזוגיות'},{q:'גבולות מול ההורים',label:'גבולות מול ההורים'},{q:'פחד לעזוב עבודה',label:'פחד לעזוב עבודה'}];
+  const groupsHtml=GROUP_ORDER.filter(k=>res.groups[k].length).map(k=>`
+    <section class="search-group"><h2>${GROUP_LABEL[k]} <span class="pill">${res.groups[k].length}</span></h2>
+      <div class="panel">${res.groups[k].map(it=>`<a class="res-row" href="#/${it.route}"><strong>${esc(it.title)}</strong><div class="res-meta">${it.meta}</div>${it.snippet?`<p class="res-snip">${it.snippet}</p>`:''}</a>`).join('')}</div>
     </section>`).join('');
   return`<form class="big-search" id="full-search" role="search">
-    <input name="q" type="search" value="${esc(q)}" placeholder='שאלה חופשית בעברית… לדוגמה: ״באילו מקרים נתתי עצה שונה?״' autocomplete="off" ${q?'':'autofocus'} aria-label="חיפוש בכל הידע">
+    <input name="q" type="search" value="${esc(q)}" placeholder="שם, נושא או שאלה חופשית" autocomplete="off" aria-label="חיפוש בכל הידע">
     <button class="button primary" type="submit">חיפוש</button>
   </form>
   <div class="example-row">${examples.map(e=>`<button class="example" type="button" data-query="${esc(e.q)}">${esc(e.label)}</button>`).join('')}</div>
-  ${q?`
-    <p class="result-count">${res.total?`נמצאו <strong>${res.total}</strong> תוצאות ל־״${esc(q)}״`:'לא נמצאו תוצאות'}</p>
-    ${res.total?groupsHtml:`<div class="panel"><div class="empty"><strong>לא נמצאו תוצאות</strong>נסו ניסוח קצר יותר, מילה מרכזית, או השם המדויק.</div></div>`}
-  `:`
-    <div class="panel"><div class="empty"><strong>כל הידע שלך, בשפה חופשית</strong>אפשר לחפש אדם, בעיה, עצה, נימוק, עיקרון או תמלול — או פשוט לשאול.<br>קיצור מקלדת: <kbd>⌘K</kbd> / <kbd>Ctrl K</kbd></div></div>
-  `}`;
+  ${q?`<p class="result-count">${res.total?`${res.total} תוצאות עבור ״${esc(q)}״. החיפוש כולל צורות עם ו/ה/ב/ל ומילים נרדפות.`:'לא נמצאו תוצאות'}</p>
+    ${res.total?groupsHtml:`<div class="panel">${emptyState('לא נמצאו תוצאות','אפשר לנסות מילה אחת מרכזית או את השם המדויק.')}</div>`}`
+  :`<div class="panel" style="margin-top:18px">${emptyState('חיפוש בכל הידע','אנשים, עצות, נימוקים, תמלולים, ניתוחי PLAUD, עקרונות ומעקבים.')}</div>`}`;
+}
+
+/* ---------- context panel ---------- */
+function backupCard(){
+  let last=null;try{last=localStorage.getItem(BACKUP_KEY)}catch{}
+  const days=last?Math.floor((Date.now()-new Date(last))/864e5):null;
+  const stale=days==null||days>=7;
+  return`<section class="ctx-card ${stale?'ctx-warn':''}"><h2>גיבוי</h2>
+    <p>${last?`גיבוי אחרון לפני ${days===0?'פחות מיום':days+' ימים'}.`:'עדיין לא נשמר גיבוי.'} המידע שמור רק בדפדפן הזה.</p>
+    <button class="button ghost sm" type="button" data-export>שמירת גיבוי</button></section>`;
+}
+function contextFor(r){
+  const parts=[];
+  if(r.key==='case'){
+    const m=data.meetings.find(x=>x.id===r.param);
+    if(m){
+      const an=m.analysis||{};
+      const others=meetingsOf(m.person).filter(x=>x.id!==m.id).slice(0,4);
+      const openF=data.followups.filter(f=>f.person===m.person&&!f.done);
+      const rel=relatedPrinciples(m);
+      parts.push(`<section class="ctx-card"><h2>פרטי ההקלטה</h2><dl class="ctx-dl">
+        <dt>אדם</dt><dd><a href="#/person/${encodeURIComponent(m.person)}">${esc(m.person)}</a></dd>
+        <dt>תאריך</dt><dd>${formatDate(m.date)}</dd>
+        <dt>היקף</dt><dd>${an.wordCount||0} מילים · ${(an.segments||[]).length} משפטים</dd>
+        ${an.speakers?.length?`<dt>דוברים</dt><dd>${an.speakers.map(esc).join(', ')}</dd>`:''}
+        <dt>PLAUD</dt><dd>${m.plaud?'נשמר':'לא נשמר'}</dd>
+        <dt>ניתוח</dt><dd>${ENGINE_LABEL}, גרסה ${an.version||'?'}</dd>
+      </dl></section>`);
+      parts.push(`<section class="ctx-card"><h2>עוד עם ${esc(m.person)} <a href="#/person/${encodeURIComponent(m.person)}">לפרופיל</a></h2>
+        ${others.length?`<ul class="ctx-list">${others.map(o=>`<li><a href="#/case/${esc(o.id)}">${esc(o.title)}</a><span class="ctx-sub">${formatDate(o.date)}</span></li>`).join('')}</ul>`:'<p class="ctx-empty">זו הפגישה היחידה.</p>'}
+        ${openF.length?`<h2 style="margin-top:14px">מעקבים פתוחים</h2><ul class="ctx-list">${openF.map(f=>`<li>${esc(f.title)}<span class="ctx-sub ${dueLabel(f.due).cls}">${dueLabel(f.due).t}</span></li>`).join('')}</ul>`:''}
+      </section>`);
+      if(rel.length)parts.push(`<section class="ctx-card"><h2>עקרונות שעשויים להתאים</h2><ul class="ctx-list">${rel.map(({principle:p})=>`<li><a href="#/principle/${esc(p.id)}">${esc(p.title)}</a></li>`).join('')}</ul><p class="zm-note">לפי חפיפת מילים. השערה בלבד.</p></section>`);
+      parts.push(zmanimCard());
+      parts.push(`<section class="ctx-danger"><button class="button danger sm" type="button" data-delete-case="${esc(m.id)}">מחיקת ההקלטה</button></section>`);
+      return parts.join('');
+    }
+  }
+  if(r.key==='person'){
+    const name=r.param;
+    const ms=meetingsOf(name);
+    const openF=data.followups.filter(f=>f.person===name&&!f.done).sort((a,b)=>(a.due||'9').localeCompare(b.due||'9'));
+    const tags=new Map();for(const m of ms)for(const t of m.tags||[])tags.set(t,(tags.get(t)||0)+1);
+    const relMap=new Map();for(const m of ms)for(const{principle:p}of relatedPrinciples(m,2))relMap.set(p.id,p);
+    parts.push(`<section class="ctx-card"><h2>מעקבים פתוחים</h2>${openF.length?`<ul class="ctx-list">${openF.map(f=>`<li>${esc(f.title)}<span class="ctx-sub ${dueLabel(f.due).cls}">${dueLabel(f.due).t}</span></li>`).join('')}</ul>`:'<p class="ctx-empty">אין.</p>'}</section>`);
+    if(tags.size)parts.push(`<section class="ctx-card"><h2>נושאים חוזרים</h2><div class="example-row" style="margin:0">${[...tags.entries()].sort((a,b)=>b[1]-a[1]).map(([t,n])=>pill(t+(n>1?' · '+n:''),'accent')).join('')}</div></section>`);
+    if(relMap.size)parts.push(`<section class="ctx-card"><h2>עקרונות שעשויים להתאים</h2><ul class="ctx-list">${[...relMap.values()].map(p=>`<li><a href="#/principle/${esc(p.id)}">${esc(p.title)}</a></li>`).join('')}</ul></section>`);
+    parts.push(zmanimCard());
+    return parts.join('');
+  }
+  if(r.key==='recordings'&&navState.lastCase){
+    const m=data.meetings.find(x=>x.id===navState.lastCase);
+    if(m)parts.push(`<section class="ctx-card"><h2>נפתח לאחרונה</h2><ul class="ctx-list"><li><a href="#/case/${esc(m.id)}">${esc(m.title)}</a><span class="ctx-sub">${esc(m.person)} · ${formatDate(m.date)}</span></li></ul></section>`);
+  }
+  parts.push(zmanimCard());
+  if(r.key==='home')parts.push(backupCard());
+  return parts.join('');
 }
 
 /* ---------- render ---------- */
 let lastSearch='';
+let currentRouteKey=null;
 const ROUTE_TITLES={
-  home:()=>({t:homeGreeting(),e:new Intl.DateTimeFormat('he-IL',{weekday:'long',day:'numeric',month:'long'}).format(new Date())}),
-  recordings:()=>({t:'הקלטות',e:'כל הפגישות הרשומות, מהחדשה אל הישנה'}),
-  people:()=>({t:'אנשים',e:'התיקים הארוכים — מי נמצא במעקב'}),
-  principles:()=>({t:'עקרונות',e:'המתודולוגיה כפי שהיא נלמדת מהקלטות'}),
-  search:()=>({t:'חיפוש',e:'חיפוש חופשי בכל הידע'}),
-  followups:()=>({t:'מעקבים',e:'מה נשאר פתוח ואיך ממשיכים'})
+  home:()=>({t:homeGreeting(),e:hebrewDate()+' · '+new Intl.DateTimeFormat('he-IL',{weekday:'long',day:'numeric',month:'long'}).format(new Date())}),
+  recordings:()=>({t:'הקלטות',e:'כל הפגישות, מהחדשה לישנה'}),
+  people:()=>({t:'אנשים',e:'כל מי שנפגשת איתו'}),
+  advice:()=>({t:'עצות ונימוקים',e:'מה ייעצת, למי ולמה'}),
+  principles:()=>({t:'עקרונות',e:'דפוסים שחוזרים בעצות'}),
+  contradictions:()=>({t:'סתירות וחריגים',e:'מקרים שדורשים בדיקה'}),
+  search:()=>({t:'חיפוש',e:'בכל הידע'}),
+  followups:()=>({t:'מעקבים',e:'מה נשאר פתוח'})
 };
 function homeGreeting(){const h=new Date().getHours();return h<5?'לילה טוב':h<12?'בוקר טוב':h<18?'צהריים טובים':'ערב טוב'}
+function routeId(){return(location.hash||'#home')}
 function render(){
   let r=parseRoute();
-  const known=['home','recordings','people','principles','search','followups','case','person','principle'];
-  if(!known.includes(r.key))r={key:'home',param:null};
+  if(!KNOWN.includes(r.key))r={key:'home',param:null};
+  if(r.key==='search'&&r.param)lastSearch=r.param;
   const active=PARENT[r.key]||r.key;
   el('desktop-nav').innerHTML=navHtml(active);
   el('mobile-nav').innerHTML=navHtml(active,true);
   let title,eyebrow;
-  if(r.key==='case'){
-    const m=data.meetings.find(x=>x.id===r.param);
-    title=m?m.title:'מקרה';eyebrow='מקרה · שרשרת ההסקה והערכה';
-  }else if(r.key==='person'){
-    title=r.param||'אדם';eyebrow='אדם · הזיכרון לפני הפגישה';
-  }else if(r.key==='principle'){
-    const p=data.principles.find(x=>x.id===r.param);
-    title=p?p.title:'עיקרון';eyebrow='עיקרון · מתודולוגיה';
-  }else{
-    const t=ROUTE_TITLES[r.key]();title=t.t;eyebrow=t.e;
-  }
+  if(r.key==='case'){const m=data.meetings.find(x=>x.id===r.param);title=m?m.title:'הקלטה';eyebrow=m?m.person+' · '+formatDate(m.date):''}
+  else if(r.key==='person'){title=r.param||'אדם';eyebrow='הזיכרון לפני הפגישה'}
+  else if(r.key==='principle'){const p=data.principles.find(x=>x.id===r.param);title=p?p.title:'עיקרון';eyebrow='עיקרון'}
+  else{const t=ROUTE_TITLES[r.key]();title=t.t;eyebrow=t.e}
   el('page-title').textContent=title;
   el('eyebrow').textContent=eyebrow;
+  if(r.key==='case'&&data.meetings.some(m=>m.id===r.param)){navState.lastCase=r.param;persistNav()}
   const views={
-    home:homeView,recordings:recordingsView,people:peopleView,principles:principlesView,
+    home:homeView,recordings:recordingsView,people:peopleView,advice:adviceView,principles:principlesView,contradictions:contradictionsView,
     search:()=>searchView(lastSearch),followups:followupsView,
     case:()=>caseView(r.param),person:()=>personView(r.param),principle:()=>principleView(r.param)
   };
   el('view').innerHTML=views[r.key]();
+  el('context').innerHTML=contextFor(r);
   bind();
-  window.scrollTo({top:0});
   document.title=r.key==='home'?'מאגר הייעוץ':title+' · מאגר הייעוץ';
+  currentRouteKey=routeId();
+  restoreScroll(r);
+  closeMenu();
+}
+function renderViewOnly(){
+  const r=parseRoute();
+  const y=window.scrollY||0;
+  el('view').innerHTML=r.key==='case'?caseView(r.param):el('view').innerHTML;
+  bind();
+  window.scrollTo({top:y});
+}
+function restoreScroll(r){
+  if(pendingJump){const j=pendingJump;pendingJump=null;setTimeout(()=>flashLine(j.mid,j.seg),30);return}
+  const y=navState.scroll[routeId()];
+  if(typeof y==='number'&&!['case','person','principle'].includes(r.key)){window.scrollTo({top:y});return}
+  window.scrollTo({top:0});
+  if(r.key==='recordings'&&navState.lastCase){const row=document.querySelector('[data-case-row="'+navState.lastCase+'"]');if(row&&row.scrollIntoView)row.scrollIntoView({block:'center'})}
 }
 function navHtml(activeKey,mobile){
-  return NAV.map(n=>{
-    const active=n.key===activeKey;
-    const c=n.count?n.count():0;
-    return`<a class="nav-item ${active?'active':''}" ${active?'aria-current="page"':''} href="#${n.key}">
-      <span class="nav-icon">${ic(n.icon)}</span><span class="nav-label">${n.label}</span>
-      ${c?`<span class="nav-count ${n.alert?'nav-count-alert':''}">${c}</span>`:''}
-    </a>`;
-  }).join('');
+  const item=n=>{
+    const a=n.key===activeKey;const c=n.count?n.count():0;const alert=n.alert&&n.alert();
+    return`<a class="nav-item ${a?'active':''}" ${a?'aria-current="page"':''} href="#${n.key}"><span class="nav-icon">${ic(n.icon)}</span><span class="nav-label">${n.label}</span>${c?`<span class="nav-count ${alert?'nav-count-alert':''}">${c}</span>`:''}</a>`;
+  };
+  if(mobile)return NAV.flatMap(g=>g.items).filter(n=>n.mobile).map(n=>item({...n,label:n.key==='advice'?'עצות':n.label})).join('');
+  return NAV.map(g=>`<div class="nav-group"><p class="nav-group-label">${g.group}</p>${g.items.map(item).join('')}</div>`).join('');
+}
+function flashLine(mid,seg){
+  const t=document.getElementById('ev-'+mid+'-'+seg);
+  if(!t)return;
+  t.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+  t.classList.remove('tr-flash');void t.offsetWidth;t.classList.add('tr-flash');
+}
+function openSource(mid,seg){
+  navState.caseTab[mid]='source';persistNav();
+  const r=parseRoute();
+  if(r.key==='case'&&r.param===mid){renderViewOnly();setTimeout(()=>flashLine(mid,seg),30)}
+  else{pendingJump={mid,seg};navigate('case',mid)}
 }
 
 /* ---------- bindings ---------- */
 function bind(){
-  qsa('[data-query]').forEach(b=>b.onclick=()=>{lastSearch=b.dataset.query;saveRecent(b.dataset.query);navigate('search')});
+  qsa('[data-query]').forEach(b=>b.onclick=()=>{lastSearch=b.dataset.query;saveRecent(b.dataset.query);if(parseRoute().key==='search')render();else navigate('search')});
   qsa('[data-follow]').forEach(c=>c.onchange=()=>{
     const f=data.followups.find(x=>x.id===c.dataset.follow);
     if(!f)return;
     f.done=c.checked;save();
-    toast(c.checked?'המעקב הושלם':'המעקב נפתח מחדש');
+    toast(c.checked?'המעקב סומן כהושלם':'המעקב נפתח מחדש');
     const row=c.closest('.follow-row');if(row)row.classList.toggle('follow-done',c.checked);
+    el('desktop-nav').innerHTML=navHtml(PARENT[parseRoute().key]||parseRoute().key);
   });
-  qsa('[data-jump-to]').forEach(a=>a.onclick=e=>{
-    e.preventDefault();
-    const target=document.getElementById(a.dataset.jumpTo);
-    if(!target)return;
-    target.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
-    target.classList.remove('tr-flash');void target.offsetWidth;target.classList.add('tr-flash');
+  qsa('[data-why]').forEach(b=>b.onclick=()=>{
+    const box=document.getElementById(b.dataset.why);if(!box)return;
+    box.hidden=!box.hidden;b.setAttribute('aria-expanded',String(!box.hidden));
   });
+  qsa('[data-open-src]').forEach(b=>b.onclick=()=>openSource(parseRoute().param,+b.dataset.openSrc));
+  qsa('[data-src-case]').forEach(b=>b.onclick=()=>openSource(b.dataset.srcCase,+b.dataset.srcSeg));
+  qsa('[data-case-tab]').forEach(b=>b.onclick=()=>{navState.caseTab[parseRoute().param]=b.dataset.caseTab;persistNav();renderViewOnly()});
+  qsa('[data-export]').forEach(b=>b.onclick=exportBackup);
+  qsa('[data-delete-case]').forEach(b=>b.onclick=()=>deleteMeeting(b.dataset.deleteCase));
   const hero=el('hero-search');
-  if(hero)hero.onsubmit=e=>{
-    e.preventDefault();
-    const q=new FormData(e.target).get('q')||'';
-    lastSearch=q;saveRecent(q);
-    if(location.hash==='#search'||location.hash==='#/search')render();else navigate('search');
-  };
+  if(hero)hero.onsubmit=e=>{e.preventDefault();lastSearch=String(new FormData(e.target).get('q')||'');saveRecent(lastSearch);navigate('search')};
   const full=el('full-search');
-  if(full)full.onsubmit=e=>{
-    e.preventDefault();
-    lastSearch=new FormData(e.target).get('q')||'';
-    saveRecent(lastSearch);
-    render();
-  };
-  const fr=el('filter-recordings');
-  if(fr)fr.oninput=()=>{
-    const box=el('recordings-list');if(!box)return;
-    const q=fr.value.trim().toLowerCase();
-    const ms=data.meetings.filter(m=>!q||JSON.stringify(m).toLowerCase().includes(q));
-    box.innerHTML=ms.length?`<div class="panel panel-flush">${ms.map(meetingRow).join('')}</div>`:`<div class="panel">${emptyState('לא נמצא','נסו מילה מרכזית.')}</div>`;
-  };
-  const fp=el('filter-people');
-  if(fp)fp.oninput=()=>{
-    const box=el('people-list');if(!box)return;
-    const q=fp.value.trim();
-    const ps=data.people.filter(p=>!q||p.name.includes(q));
-    box.innerHTML=ps.length?ps.map(p=>`<a class="row person-row" href="#/person/${encodeURIComponent(p.name)}">
-      <div class="row-main"><div class="row-line1"><h3 class="row-title">${esc(p.name)}</h3></div>
-      <div class="row-meta">${esc(p.topic||'')} · ${p.meetings} פגישות</div></div>
-      <span class="row-arrow">${ic('fwd')}</span></a>`).join('')
-      :`<div class="empty"><strong>לא נמצא</strong></div>`;
-  };
+  if(full)full.onsubmit=e=>{e.preventDefault();lastSearch=String(new FormData(e.target).get('q')||'');saveRecent(lastSearch);render()};
+  const live=(id,key,fn,box)=>{const i=el(id);if(i)i.oninput=i.onchange=()=>{navState.filters[key]=i.value;persistNav();fn()}};
+  live('filter-recordings','recordings',()=>{el('recordings-list').innerHTML=recordingsList(navState.filters.recordings||'',navState.filters.recPerson||'')});
+  live('filter-rec-person','recPerson',()=>{el('recordings-list').innerHTML=recordingsList(navState.filters.recordings||'',navState.filters.recPerson||'')});
+  live('filter-people','people',()=>{el('people-list').innerHTML=peopleList(navState.filters.people||'')});
+  live('filter-advice','advice',()=>{el('advice-list').innerHTML=adviceList(navState.filters.advice||'',navState.filters.advPerson||'');bindSrcButtons()});
+  live('filter-adv-person','advPerson',()=>{el('advice-list').innerHTML=adviceList(navState.filters.advice||'',navState.filters.advPerson||'');bindSrcButtons()});
   const tf=el('tr-filter');
   if(tf)tf.oninput=()=>{
     const q=tf.value.trim().toLowerCase();
-    qsa('#tr-list .tr-line').forEach(li=>{
-      const t=li.textContent.toLowerCase();
-      li.classList.toggle('tr-dim',q.length>0&&!t.includes(q));
-    });
+    qsa('#tr-list .tr-line').forEach(li=>li.classList.toggle('tr-dim',q.length>0&&!li.textContent.toLowerCase().includes(q)));
   };
   el('empty-import')?.addEventListener('click',openImport);
+  el('inline-import')?.addEventListener('click',openImport);
   const fq=el('follow-quick');
   if(fq)fq.onsubmit=e=>{
     e.preventDefault();
     const fd=new FormData(e.target);
     const title=String(fd.get('title')||'').trim();
     if(!title)return;
-    data.followups.unshift({id:crypto.randomUUID(),person:String(fd.get('person')||''),title,due:String(fd.get('due')||todayISO()),done:false});
-    save();toast('המעקב נוסף');
-    navigate('followups');
+    data.followups.unshift({id:crypto.randomUUID(),person:String(fd.get('person')||''),title,due:String(fd.get('due')||addDays(todayISO(),7)),done:false});
+    save();toast('המעקב נוסף');render();
   };
 }
+function bindSrcButtons(){qsa('[data-src-case]').forEach(b=>b.onclick=()=>openSource(b.dataset.srcCase,+b.dataset.srcSeg))}
 
-/* ---------- palette (⌘K) ---------- */
-let palActive=-1,palFlat=[];
+/* ---------- recent searches ---------- */
+const RECENT_KEY='consultingRecent';
+function loadRecent(){try{return JSON.parse(localStorage.getItem(RECENT_KEY))||[]}catch{return[]}}
+function saveRecent(q){
+  q=String(q||'').trim();if(!q)return;
+  let r=loadRecent().filter(x=>x!==q);r.unshift(q);
+  try{localStorage.setItem(RECENT_KEY,JSON.stringify(r.slice(0,5)))}catch{}
+}
+
+/* ---------- palette ---------- */
+let palActive=-1;
 function openPalette(){
-  const d=el('search-dialog');
-  if(!d)return;
+  const d=el('search-dialog');if(!d||d.open)return;
   palActive=-1;
-  const inp=el('palette-input');
-  inp.value='';
+  const inp=el('palette-input');inp.value='';
   renderPalette('');
   d.showModal();
   setTimeout(()=>inp.focus(),30);
 }
 function renderPalette(q){
-  const box=el('palette-results');
-  if(!box)return;
+  const box=el('palette-results');if(!box)return;
+  palActive=-1;
   if(!q.trim()){
     const recent=loadRecent();
-    const examples=[
-      {q:'דניאל עצה',label:'מה ייעצתי לדניאל בפגישה האחרונה ולמה?'},
-      {q:'עקרונות זוגי',label:'איזה עקרונות חוזרים בייעוץ זוגי?'},
-      {q:'גבול משפחה',label:'מקרים על גבולות מול המשפחה'}
-    ];
+    const people=allPeople().slice(0,4);
     box.innerHTML=`
-      ${recent.length?`<h3 class="pal-h">חיפושים אחרונים</h3>${recent.map(r=>`<button class="pal-item pal-recent" type="button" data-q="${esc(r)}">${ic('clock')}<span class="p-t">${esc(r)}</span></button>`).join('')}`:''}
-      <h3 class="pal-h">נסו לשאול</h3>
-      ${examples.map(e=>`<button class="pal-item pal-example" type="button" data-q="${esc(e.q)}">${ic('spark')}<span class="p-t">${esc(e.label)}</span></button>`).join('')}
-      ${!recent.length?`<p class="pal-tip">הזינו שאלה חופשית בעברית — למשל ״מה אמרתי לאנשים שפחדו לעזוב עבודה?״</p>`:''}`;
-    palFlat=[];palActive=-1;
-    box.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{
-      el('palette-input').value=b.dataset.q;
-      renderPalette(b.dataset.q);
-      el('palette-input').focus();
-    });
-    return;
-  }
-  const res=searchAll(q);
-  const per=4;
-  const visible=[];
-  let html='';
-  for(const k of ['meeting','person','principle','followup']){
-    const items=res.groups[k].slice(0,per);
-    if(!items.length)continue;
-    html+=`<h3 class="pal-h">${GROUP_LABEL[k]}</h3>`;
-    for(const it of items){
-      const idx=visible.length;
-      visible.push(it);
-      html+=`<button class="pal-item" type="button" data-pidx="${idx}" data-route-target="#/${it.route}">${ic({meeting:'mic',person:'users',principle:'spark',followup:'check'}[k])}<span class="p-t">${esc(it.title)}</span><span class="p-m">${it.meta}</span></button>`;
+      ${recent.length?`<h3 class="pal-h">חיפושים אחרונים</h3>${recent.map(r=>`<button class="pal-item" type="button" data-q="${esc(r)}">${ic('clock')}<span class="p-t">${esc(r)}</span></button>`).join('')}`:''}
+      ${people.length?`<h3 class="pal-h">אנשים אחרונים</h3>${people.map((p,i)=>`<button class="pal-item" type="button" data-pidx="${i}" data-route-target="#/person/${encodeURIComponent(p.name)}">${ic('users')}<span class="p-t">${esc(p.name)}</span><span class="p-m">${p.last?formatDate(p.last):''}</span></button>`).join('')}`:''}`;
+    box.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{el('palette-input').value=b.dataset.q;renderPalette(b.dataset.q);el('palette-input').focus()});
+  }else{
+    const res=searchAll(q);
+    let html='',idx=0;
+    for(const k of GROUP_ORDER){
+      const items=res.groups[k].slice(0,4);
+      if(!items.length)continue;
+      html+=`<h3 class="pal-h">${GROUP_LABEL[k]}</h3>`;
+      for(const it of items)html+=`<button class="pal-item" type="button" data-pidx="${idx++}" data-route-target="#/${it.route}">${ic(GROUP_ICON[k])}<span class="p-t">${esc(it.title)}</span><span class="p-m">${it.meta}</span></button>`;
     }
+    box.innerHTML=html||`<p class="pal-tip">אין תוצאות עבור ״${esc(q)}״.</p>`;
   }
-  if(!visible.length)html=`<p class="pal-tip pal-empty-line">אין תוצאות ל־״${esc(q)}״ — נסו ניסוח אחר.</p>`;
-  box.innerHTML=html;
-  palFlat=visible;
-  palActive=-1;
-  box.querySelectorAll('[data-pidx]').forEach(b=>b.onclick=()=>{
-    el('search-dialog').close();
-    location.hash=b.dataset.routeTarget.slice(1);
-  });
+  box.querySelectorAll('[data-pidx]').forEach(b=>b.onclick=()=>{el('search-dialog').close();location.hash=b.dataset.routeTarget.slice(1)});
 }
 function bindPalette(){
   const d=el('search-dialog');
-  if(!d||d.__bound)return;
-  d.__bound=true;
+  if(!d||d.__bound)return;d.__bound=true;
   d.addEventListener('click',e=>{if(e.target===d)d.close()});
   const inp=el('palette-input');
-  inp.addEventListener('input',()=>{renderPalette(inp.value)});
+  inp.addEventListener('input',()=>renderPalette(inp.value));
   inp.addEventListener('keydown',e=>{
     const items=[...el('palette-results').querySelectorAll('[data-pidx]')];
     if(e.key==='ArrowDown'||e.key==='ArrowUp'){
-      e.preventDefault();
-      if(!items.length)return;
+      e.preventDefault();if(!items.length)return;
       palActive=(palActive+(e.key==='ArrowDown'?1:-1)+items.length)%items.length;
       items.forEach((b,i)=>b.classList.toggle('active',i===palActive));
       items[palActive].scrollIntoView({block:'nearest'});
-    }else if(e.key==='Enter'&&palActive>=0){
-      e.preventDefault();
-      items[palActive].click();
-    }
+    }else if(e.key==='Enter'&&palActive>=0){e.preventDefault();items[palActive].click()}
   });
   el('palette-form').addEventListener('submit',e=>{
     e.preventDefault();
-    const q=inp.value.trim();
-    if(!q)return;
-    d.close();
-    lastSearch=q;saveRecent(q);
-    navigate('search');
+    const q=inp.value.trim();if(!q)return;
+    d.close();lastSearch=q;saveRecent(q);navigate('search');
   });
 }
 
-/* ---------- import ---------- */
+/* ---------- ייבוא ---------- */
 function openImport(){
-  const form=el('import-form');
-  form.reset();
+  const form=el('import-form');form.reset();
   form.elements.date.value=todayISO();
-  const btn=el('analyze-btn');
-  btn.disabled=false;
-  btn.querySelector('.btn-label').textContent='ניתוח ושמירה';
+  el('people-list-opts').innerHTML=allPeople().map(p=>`<option value="${esc(p.name)}"></option>`).join('');
+  const btn=el('analyze-btn');btn.disabled=false;btn.querySelector('.btn-label').textContent='ניתוח ושמירה';
   el('import-dialog').showModal();
+}
+function importMeeting({title,person,date,transcript,plaud}){
+  const analysis=analyzeTranscript(transcript);
+  const tags=inferTags(transcript+' '+(plaud||''));
+  const meeting={id:crypto.randomUUID(),title:title||'הקלטה חדשה',person,date,transcript,plaud:plaud||'',summary:analysis.summary,tags,analysis};
+  data.meetings.unshift(meeting);
+  if(!data.people.some(x=>x.name===person))data.people.unshift({name:person,topic:tags[0]});
+  for(const f of analysis.followups)data.followups.unshift({id:crypto.randomUUID(),person,title:f.text,due:addDays(date,7),done:false,meetingId:meeting.id});
+  save();
+  return meeting;
 }
 function bindImport(){
   el('new-transcript').onclick=openImport;
   const di=el('import-dialog');
   di.addEventListener('click',e=>{if(e.target===di)di.close()});
-  el('file-input').onchange=async e=>{
-    const file=e.target.files[0];
-    if(file)document.querySelector('[name=transcript]').value=await file.text();
-  };
+  el('file-input').onchange=async e=>{const file=e.target.files[0];if(file)document.querySelector('[name=transcript]').value=await file.text()};
   el('import-form').onsubmit=e=>{
-    const submitter=e.submitter;
-    if(submitter&&submitter.value==='cancel')return;
+    if(e.submitter&&e.submitter.value==='cancel')return;
     e.preventDefault();
     const fd=new FormData(e.target);
-    const transcript=String(fd.get('transcript')||'').trim();
-    const person=String(fd.get('person')||'').trim();
-    const title=String(fd.get('title')||'').trim();
-    const date=String(fd.get('date')||'')||todayISO();
-    if(!transcript||!person){toast('יש להשלים את שם האדם ותוכן התמלול');return}
-    const btn=el('analyze-btn');
-    const lbl=btn.querySelector('.btn-label');
-    btn.disabled=true;
-    const stages=['מקריא תמלול…','מזהה בעיות, עצות ונימוקים…','שומר…'];
-    let i=0;lbl.textContent=stages[0];
-    const tick=setInterval(()=>{i++;if(i<stages.length)lbl.textContent=stages[i]},300);
+    const v=k=>String(fd.get(k)||'').trim();
+    if(!v('transcript')||!v('person')){toast('חסר שם האדם או התמלול');return}
+    const btn=el('analyze-btn');btn.disabled=true;btn.querySelector('.btn-label').textContent='מנתח…';
     setTimeout(()=>{
-      clearInterval(tick);
-      const analysis=analyzeTranscript(transcript);
-      const meeting={id:crypto.randomUUID(),title:title||'תמלול חדש',person,date,transcript,summary:analysis.summary,tags:[/גבול/.test(transcript)?'גבולות':'תמלול חדש'],analysis};
-      data.meetings.unshift(meeting);
-      let p=data.people.find(x=>x.name===person);
-      if(p){p.meetings+=1;p.last=formatDate(meeting.date)}
-      else data.people.unshift({name:person,meetings:1,last:formatDate(meeting.date),topic:meeting.tags[0]});
-      if(/מעקב|בפגישה הבאה|לבדוק/.test(transcript))data.followups.unshift({id:crypto.randomUUID(),person,title:'מעקב בעקבות '+meeting.title,due:meeting.date,done:false});
-      save();
-      di.close();
-      btn.disabled=false;lbl.textContent='ניתוח ושמירה';
-      toast('התמלול נותח ונשמר');
-      navigate('case',meeting.id);
-    },750);
+      const m=importMeeting({title:v('title'),person:v('person'),date:v('date')||todayISO(),transcript:v('transcript'),plaud:v('plaud')});
+      di.close();toast('ההקלטה נותחה ונשמרה');
+      navigate('case',m.id);
+    },60);
   };
 }
 
-/* ---------- theme ---------- */
+/* ---------- מחיקה, גיבוי ושחזור ---------- */
+function deleteMeeting(id){
+  const m=data.meetings.find(x=>x.id===id);if(!m)return;
+  if(!confirm(`למחוק את ההקלטה „${m.title}”? התמלול והידע שחולץ ממנה יימחקו מהמכשיר.`))return;
+  data.meetings=data.meetings.filter(x=>x.id!==id);
+  data.followups=data.followups.filter(f=>f.meetingId!==id);
+  if(navState.lastCase===id){navState.lastCase=null;persistNav()}
+  save();toast('ההקלטה נמחקה');navigate('recordings');
+}
+function exportBackup(){
+  const payload={app:'consulting-knowledge',format:1,exportedAt:new Date().toISOString(),data};
+  const blob=new Blob([JSON.stringify(payload,null,1)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='consulting-backup-'+todayISO()+'.json';
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  try{localStorage.setItem(BACKUP_KEY,new Date().toISOString())}catch{}
+  toast('הגיבוי נשמר בתיקיית ההורדות');
+  if(parseRoute().key==='home')el('context').innerHTML=contextFor(parseRoute()),bind();
+}
+function validBackup(p){
+  const d=p&&p.data;
+  return d&&['meetings','people','principles','followups'].every(k=>Array.isArray(d[k]))&&d.meetings.every(m=>m&&typeof m.transcript==='string'&&typeof m.person==='string'&&typeof m.date==='string');
+}
+function bindRestore(){
+  const inp=el('restore-input');if(!inp)return;
+  inp.onchange=async()=>{
+    const file=inp.files[0];inp.value='';if(!file)return;
+    let p;try{p=JSON.parse(await file.text())}catch{toast('הקובץ אינו גיבוי תקין');return}
+    if(!validBackup(p)){toast('הקובץ אינו גיבוי תקין');return}
+    if(!confirm(`לשחזר ${p.data.meetings.length} הקלטות מהגיבוי? המידע הנוכחי במכשיר יוחלף.`))return;
+    data=p.data;ensureAllAnalysis();save();toast('הגיבוי שוחזר');navigate('home');
+  };
+}
+
+/* ---------- theme & menu ---------- */
 function applyTheme(t){
   document.documentElement.dataset.theme=t;
   try{localStorage.setItem('consultingTheme',t)}catch{}
   const m=document.querySelector('meta[name=theme-color]');
-  if(m)m.content=t==='dark'?'#101418':'#F4F2EC';
-  const btn=el('theme-toggle');
-  if(btn){
-    btn.setAttribute('aria-label',t==='dark'?'מעבר למצב בהיר':'מעבר למצב כהה');
-    const l=btn.querySelector('.theme-label');
-    if(l)l.textContent=t==='dark'?'מצב בהיר':'מצב כהה';
-  }
+  if(m)m.content=t==='dark'?'#0F1215':'#F4F5F3';
+  const l=document.querySelector('#theme-toggle .theme-label');
+  if(l)l.textContent=t==='dark'?'מצב בהיר':'מצב כהה';
 }
 function initTheme(){
-  let t=null;
-  try{t=localStorage.getItem('consultingTheme')}catch{}
+  let t=null;try{t=localStorage.getItem('consultingTheme')}catch{}
   if(t!=='light'&&t!=='dark')t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';
   applyTheme(t);
   el('theme-toggle').onclick=()=>applyTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
 }
+function closeMenu(){const s=el('sidebar');if(s&&s.classList)s.classList.remove('open');const sc=el('scrim');if(sc&&sc.classList)sc.classList.remove('open');const b=el('menu-btn');if(b&&b.setAttribute)b.setAttribute('aria-expanded','false')}
+function bindMenu(){
+  const b=el('menu-btn');if(!b)return;
+  b.onclick=()=>{el('sidebar').classList.add('open');el('scrim').classList.add('open');b.setAttribute('aria-expanded','true')};
+  el('scrim').onclick=closeMenu;
+  el('export-btn').onclick=exportBackup;
+}
 
-/* ---------- modelContext tools (שמות וסכמות זהות לגרסה הקודמת) ---------- */
+/* ---------- modelContext tools (שמות וסכמות נשמרו) ---------- */
 function bindModelContext(){
   if(!document.modelContext||!document.modelContext.registerTool)return;
   const register=tool=>Promise.resolve(document.modelContext.registerTool(tool)).catch(()=>{});
   register({
     name:'search_consulting_knowledge',title:'חיפוש במאגר הייעוץ',
-    description:'חיפוש בפגישות השמורות לפי אדם, נושא, עצה או תוכן התמלול.',
+    description:'חיפוש בהקלטות, אנשים, עצות, עקרונות ומעקבים השמורים במאגר.',
     inputSchema:{type:'object',properties:{query:{type:'string',minLength:1}},required:['query'],additionalProperties:false},
     annotations:{readOnlyHint:true,untrustedContentHint:true},
     execute({query}){
       if(typeof query!=='string'||!query.trim())throw new Error('נדרש ביטוי חיפוש');
       const res=searchAll(query);
-      const results=[
-        ...res.groups.meeting.map(it=>({id:it.id,type:'meeting',title:it.title,person:it.meta?.split(' · ')[0],date:null,summary:it.snippet?.replace(/<[^>]+>/g,''),route:it.route})),
-        ...res.groups.principle.map(it=>({id:it.id,type:'principle',title:it.title,summary:it.meta,route:it.route})),
-        ...res.groups.person.map(it=>({id:it.id,type:'person',title:it.title,summary:it.meta,route:it.route})),
-        ...res.groups.followup.map(it=>({id:it.id,type:'followup',title:it.title,summary:it.meta,route:it.route}))
-      ].slice(0,20);
-      lastSearch=query.trim();
-      navigate('search');
+      const strip=s=>String(s||'').replace(/<[^>]+>/g,'');
+      const results=GROUP_ORDER.flatMap(k=>res.groups[k].map(it=>({id:it.id,type:k,title:it.title,summary:strip(it.snippet||it.meta),route:it.route}))).slice(0,20);
       return{count:res.total,results};
     }
   });
@@ -1030,11 +1187,9 @@ function bindModelContext(){
     inputSchema:{type:'object',properties:{person:{type:'string',minLength:1},title:{type:'string',minLength:1},due:{type:'string',pattern:'^\\d{4}-\\d{2}-\\d{2}$'}},required:['person','title','due'],additionalProperties:false},
     annotations:{readOnlyHint:false,untrustedContentHint:false},
     execute(input){
-      if(!input||typeof input.person!=='string'||typeof input.title!=='string'||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(input.due))throw new Error('נתוני המעקב אינם תקינים');
+      if(!input||typeof input.person!=='string'||!input.person.trim()||typeof input.title!=='string'||!input.title.trim()||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(input.due))throw new Error('נתוני המעקב אינם תקינים');
       const item={id:crypto.randomUUID(),person:input.person.trim(),title:input.title.trim(),due:input.due,done:false};
-      data.followups.unshift(item);
-      save();
-      navigate('followups');
+      data.followups.unshift(item);save();navigate('followups');
       return{id:item.id,status:'created'};
     }
   });
@@ -1046,21 +1201,24 @@ initTheme();
 ensureAllAnalysis();
 bindImport();
 bindPalette();
+bindRestore();
+bindMenu();
 bindModelContext();
 el('global-search-btn').onclick=openPalette;
 render();
 window.addEventListener('hashchange',()=>{
-  const r=parseRoute();
-  if(r.key==='search'&&r.param){lastSearch=r.param}
+  if(currentRouteKey){navState.scroll[currentRouteKey]=window.scrollY||0;persistNav()}
   render();
 });
 document.addEventListener('keydown',e=>{
   const inField=/^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement||{}).tagName||'');
-  if((e.metaKey||e.ctrlKey)&&(e.key==='k'||e.key==='K')){e.preventDefault();openPalette()}
-  else if(e.key==='/'&&!inField&&el('search-dialog').open===false){e.preventDefault();openPalette()}
+  if((e.metaKey||e.ctrlKey)&&(e.key==='k'||e.key==='K'||e.key==='ל')){e.preventDefault();openPalette()}
+  else if(e.key==='/'&&!inField&&!el('search-dialog').open){e.preventDefault();openPalette()}
+  else if(e.key==='Escape')closeMenu();
 });
+if(typeof setInterval==='function')setInterval(()=>{const z=el('zmanim');if(z&&z.outerHTML!==undefined)z.outerHTML=zmanimCard()},60000);
 if('serviceWorker'in navigator){
   window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
 /* debug/test hook */
-window.__consulting={SEED,load,save,analyzeTranscript,splitSegments,searchAll,tokenize,relatedPrinciples,data,navigate,esc};
+window.__consulting={SEED,load,save,analyzeTranscript,splitSegments,searchAll,tokenize,variants,relatedPrinciples,linkedCases,allPeople,allAdvice,adviceChanges,zmanimFor,hebrewDate,gematria,importMeeting,validBackup,get data(){return data},navigate,esc};

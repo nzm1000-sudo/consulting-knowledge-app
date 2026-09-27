@@ -4,7 +4,7 @@
   "description": "הזיכרון המקצועי של היועץ: פגישות, אנשים, עקרונות ומעקבים",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#F4F2EC",
+  "background_color": "#F4F5F3",
   "theme_color": "#0E5E56",
   "lang": "he",
   "dir": "rtl",
