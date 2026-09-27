@@ -410,7 +410,7 @@ function itemHtml(it,mid){
   </div>`;
 }
 function stepHtml(label,items,mid,opts={}){
-  return`<section class="chain-step ${opts.cls||''}">
+  return`<section class="chain-step ${opts.cls||''} ${opts.cat?'k-'+opts.cat:''}">
     <h3 class="step-label">${label}</h3>
     <div class="step-body">${items&&items.length?items.map(it=>itemHtml(it,mid)).join(''):`<p class="step-empty">${opts.empty||'לא זוהה בפגישה זו'}</p>`}</div>
   </section>`;
@@ -550,7 +550,7 @@ function homeView(){
   const adv=allAdvice().slice(0,3);
   return`
   <section class="hero">
-    <h2 class="hero-q">על מי או על מה מדברים היום?</h2>
+    <h2 class="hero-q">על מי או על <em>מה</em> מדברים היום?</h2>
     <form class="hero-search" id="hero-search" role="search">
       <input name="q" type="search" placeholder="שם, נושא או שאלה חופשית" autocomplete="off" aria-label="חיפוש במאגר">
       <button class="button primary" type="submit" aria-label="חיפוש">${ic('search')}</button>
@@ -627,14 +627,14 @@ function knowledgePanel(m){
   const an=m.analysis||{};
   return`<p class="section-note">כל פריט נשלף מהתמלול ומקושר למשפט המקורי. „למה?” מציג את המשפט עצמו.</p>
   <div class="chain">
-    ${stepHtml('הבעיה',an.problem?[an.problem]:[],m.id,{empty:'לא זוהה ניסוח מפורש של הבעיה'})}
-    ${stepHtml('תצפיות',an.observations,m.id,{empty:'לא זוהו תצפיות'})}
-    ${stepHtml('העצה',an.advice,m.id,{cls:'step-advice',empty:'לא זוהתה עצה או החלטה'})}
-    ${stepHtml('הנימוק',an.reasoning,m.id,{empty:'לא זוהה נימוק מפורש'})}
-    ${stepHtml('התוצאה המצופה',an.outcomes,m.id,{empty:'לא נאמרה מטרה מפורשת'})}
-    ${stepHtml('מה קרה בפועל',an.results,m.id,{empty:'לא דווח על תוצאה של עצה קודמת'})}
-    ${stepHtml('מעקב',an.followups,m.id,{empty:'לא נקבע מעקב'})}
-    ${stepHtml('חריגים',an.contradictions,m.id,{empty:'לא זוהה חריג'})}
+    ${stepHtml('הבעיה',an.problem?[an.problem]:[],m.id,{cat:'problem',empty:'לא זוהה ניסוח מפורש של הבעיה'})}
+    ${stepHtml('תצפיות',an.observations,m.id,{cat:'observe',empty:'לא זוהו תצפיות'})}
+    ${stepHtml('העצה',an.advice,m.id,{cls:'step-advice',cat:'advice',empty:'לא זוהתה עצה או החלטה'})}
+    ${stepHtml('הנימוק',an.reasoning,m.id,{cat:'reason',empty:'לא זוהה נימוק מפורש'})}
+    ${stepHtml('התוצאה המצופה',an.outcomes,m.id,{cat:'outcome',empty:'לא נאמרה מטרה מפורשת'})}
+    ${stepHtml('מה קרה בפועל',an.results,m.id,{cat:'result',empty:'לא דווח על תוצאה של עצה קודמת'})}
+    ${stepHtml('מעקב',an.followups,m.id,{cat:'follow',empty:'לא נקבע מעקב'})}
+    ${stepHtml('חריגים',an.contradictions,m.id,{cat:'except',empty:'לא זוהה חריג'})}
   </div>`;
 }
 function sourcePanel(m){
@@ -990,6 +990,7 @@ function bind(){
     const q=tf.value.trim().toLowerCase();
     qsa('#tr-list .tr-line').forEach(li=>li.classList.toggle('tr-dim',q.length>0&&!li.textContent.toLowerCase().includes(q)));
   };
+  bindTilt();
   el('empty-import')?.addEventListener('click',openImport);
   el('inline-import')?.addEventListener('click',openImport);
   const fq=el('follow-quick');
@@ -1001,6 +1002,19 @@ function bind(){
     data.followups.unshift({id:crypto.randomUUID(),person:String(fd.get('person')||''),title,due:String(fd.get('due')||addDays(todayISO(),7)),done:false});
     save();toast('המעקב נוסף');render();
   };
+}
+// הטיה תלת־ממדית עדינה לכרטיסי עקרונות, לפי מיקום הסמן
+function bindTilt(){
+  if(!window.matchMedia||matchMedia('(prefers-reduced-motion: reduce)').matches||!matchMedia('(hover: hover)').matches)return;
+  qsa('.principle-card').forEach(c=>{
+    c.onpointermove=e=>{
+      const r=c.getBoundingClientRect();
+      const x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;
+      c.style.transform=`perspective(900px) rotateX(${(0.5-y)*6}deg) rotateY(${(x-0.5)*8}deg) translateY(-3px)`;
+      c.style.setProperty('--mx',(x*100)+'%');c.style.setProperty('--my',(y*100)+'%');
+    };
+    c.onpointerleave=()=>{c.style.transform=''};
+  });
 }
 function bindSrcButtons(){qsa('[data-src-case]').forEach(b=>b.onclick=()=>openSource(b.dataset.srcCase,+b.dataset.srcSeg))}
 
@@ -1146,7 +1160,7 @@ function applyTheme(t){
   document.documentElement.dataset.theme=t;
   try{localStorage.setItem('consultingTheme',t)}catch{}
   const m=document.querySelector('meta[name=theme-color]');
-  if(m)m.content=t==='dark'?'#0F1215':'#F4F5F3';
+  if(m)m.content=t==='dark'?'#090E18':'#ECEFF3';
   const l=document.querySelector('#theme-toggle .theme-label');
   if(l)l.textContent=t==='dark'?'מצב בהיר':'מצב כהה';
 }
