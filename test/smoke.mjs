@@ -179,7 +179,8 @@ for(const p of app.data.principles)known.add(p.title);
 for(const c of app.data.cases||[])known.add(c.title);
 for(const m of app.data.meetings)known.add(m.title);
 for(const p of app.allPeople())known.add(p.name);
-const noInvention=a=>a.findings.every(f=>known.has(f.text)||(f.route&&f.route.startsWith('case/')));
+// a finding is either recorded content, a link to a recording, or a system-computed pattern row (kind 'pattern') that is followed by verbatim evidence
+const noInvention=a=>a.findings.every((f,i)=>known.has(f.text)||(f.route&&f.route.startsWith('case/'))||(f.kind==='pattern'&&a.findings.slice(i+1).some(g=>(g.ev||g.route)&&g.section===f.section)));
 // intents
 assert.equal(app.detectIntent('מה אמרתי לו בפעם הקודמת?').k,'previous');
 assert.equal(app.detectIntent('למה המלצתי לו לעצור?').k,'why');
@@ -254,7 +255,7 @@ app.data.cases.pop();
 // case scope
 a=ask('איך המקרה התפתח?',{type:'case',id:'c1'});
 assert.equal(a.scope.type,'case');assert(a.coverage.text.includes('2 הקלטות בתיק'));
-assert(a.findings.some(f=>f.label==='מה דווח מאז'),'case evolution uses later results');
+assert.equal(a.intent,'timeline');assert(a.findings.some(f=>f.label==='מה דווח'&&f.text.includes('עבד בשתי')),'case evolution includes later results');
 // advice scope (dossier)
 a=ask('מה קרה אחרי העצה הזו?',{type:'advice',id:'m2:advice-1'});
 assert(a.findings.some(f=>f.section==='מה קרה אחר כך'&&f.text.includes('עבד בשתי')),'advice → later outcome');
@@ -282,5 +283,50 @@ assert.equal(v.answer.length,1,'uncited and wrongly-cited claims removed');
 assert.equal(v.quotes.length,1,'non-verbatim quote removed');
 assert.equal(v.rejected.length,3);
 assert.equal(app.SYNTHESIS.available,false,'public site never calls a model');
+
+// 12. Phase D: longitudinal intelligence (synthetic data)
+// time windows
+assert.deepEqual(app.parseWindow('מה קרה בשלוש הפגישות האחרונות?'),{kind:'last',n:3,label:'3 הפגישות האחרונות'});
+assert.equal(app.parseWindow('מה השתנה בחצי השנה האחרונה?').kind,'since');
+a=ask('מה קרה בשתי הפגישות האחרונות?',{type:'global'});
+assert.equal(a.intent,'timeline');assert.equal(a.coverage.inScope,2,'window limits meetings');
+assert(a.coverage.text.startsWith('חלון זמן: 2 הפגישות האחרונות'));
+// timeline is chronological and grouped by meeting
+a=ask('איך זה התפתח לאורך הזמן?',{type:'person',id:'דניאל'});
+const secs=[...new Set(a.findings.map(f=>f.section))];
+assert.equal(secs.length,2,'one group per meeting');assert(secs[0].includes('3 בספטמבר')&&secs[1].includes('17 בספטמבר'),'oldest first');
+assert(a.answer.some(p=>p.includes('העצה השתנתה פעם אחת')));
+assert(allVerbatim(a)&&noInvention(a));
+// recurring concepts: synonyms count as one topic across meetings
+const keysA=app.conceptKeys('ויכוחים שמסלימים'),keysB=app.conceptKeys('עבד בשתי מריבות מתוך שלוש');
+assert([...keysA.keys()].some(k=>keysB.has(k)),'ויכוחים ≈ מריבות');
+a=ask('מה חוזר אצלו?',{type:'person',id:'דניאל'});
+assert.equal(a.intent,'recurring');
+assert(a.findings.some(f=>f.kind==='pattern'&&f.label.startsWith('2 הקלטות')),'recurring across 2 recordings');
+assert(a.answer[0].includes('התאמה לשונית'),'recurrence is labelled as linguistic, not a verdict');
+assert(allVerbatim(a)&&noInvention(a));
+// advice → outcome linkage
+const outs=app.adviceOutcomes(app.data.meetings);
+const m2o=outs.find(x=>x.m.id==='m2');
+assert.equal(m2o.status,'reported');assert(m2o.results[0].it.text.includes('עבד בשתי'));
+assert.equal(outs.find(x=>x.m.id==='m4').status,'no_later_meeting');
+a=ask('האם העצות שלי עבדו?',{type:'global'});
+assert.equal(a.intent,'outcomes');
+assert(a.answer[0].includes('הסקה'),'the link is declared an inference');
+assert(a.unknowns.some(u=>u.includes('עוד אין פגישת המשך')));
+// closed vs open
+a=ask('מה נסגר ומה עדיין פתוח?',{type:'person',id:'דניאל'});
+assert.equal(a.intent,'unresolved');
+assert(a.findings.some(f=>f.section==='נסגר')&&a.findings.some(f=>f.section==='פתוח'));
+// first appearance
+a=ask('מתי התחילו הוויכוחים?',{type:'person',id:'דניאל'});
+assert.equal(a.intent,'firstSeen');
+assert(a.answer[0].includes('3 בספטמבר'),'first seen in m2');
+assert(a.unknowns.some(u=>u.includes('רק להקלטות שבמאגר')),'first = first recorded');
+// change of advice shows the stated reason
+a=ask('מתי שיניתי את ההמלצה ומה היה הנימוק?',{type:'person',id:'דניאל'});
+assert.equal(a.intent,'changedMind');
+assert(a.findings.some(f=>f.label==='הנימוק שנאמר בפגישה המאוחרת'&&f.text.startsWith('כי')));
+assert(allVerbatim(a)&&noInvention(a));
 
 console.log('ALL SMOKE TESTS PASSED');

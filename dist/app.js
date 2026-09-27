@@ -296,9 +296,12 @@ function tokenize(q){
     .map(w=>w.replace(/^[.,!?…:;()\-–+]+/,'').replace(/[.,!?…:;()\-–+]+$/,''))
     .filter(w=>w.length>=2&&!STOP.has(w));
 }
+// כתיב מלא: „וויכוח” ו„ויכוח” הם אותה מילה. מנרמלים וו ויי כפולים.
+const normHe=t=>t.replace(/וו/g,'ו').replace(/יי/g,'י');
 function stems(tok){
-  const out=new Set([tok]);
-  for(const p of PFX)if(tok.startsWith(p)&&tok.length-p.length>=3)out.add(tok.slice(p.length));
+  const out=new Set([tok,normHe(tok)]);
+  // עד שתי אותיות תחילית (למשל „וה”, „שב”), ואז גרסה מנורמלת של כל תוצאה
+  for(let round=0;round<2;round++)for(const w of [...out])for(const p of PFX)if(w.startsWith(p)&&w.length-p.length>=3){const r=w.slice(p.length);out.add(r);out.add(normHe(r))}
   return[...out];
 }
 function variants(tok){
@@ -635,13 +638,18 @@ function weatherCard(){
    ============================================================ */
 const INTENTS=[
   {k:'briefing',label:'הכנה לפגישה',re:/(תכין|הכנה|להתכונן|לפני הפגישה|לפני שאני מדבר|עוד מעט מדבר|מה חשוב שאזכור|מה חשוב לדעת|מה באמת חשוב|תזכיר לי|תדריך)/},
-  {k:'changedMind',label:'שינויים וסתירות בעצות',re:/(שיניתי את דעתי|שינית|סותר|סתירה|סתירות|משהו אחר|אמרתי אחרת)/},
+  {k:'changedMind',label:'שינויים וסתירות בעצות',re:/(שיניתי את|שיניתי|שינית|סותר|סתירה|סתירות|משהו אחר|אמרתי אחרת)/},
+  {k:'firstSeen',label:'מתי נושא הופיע לראשונה',re:/(מתי .{0,25}התחיל|מתי .{0,25}הופיע|מתי לראשונה|הופיע לראשונה|מאיזה שלב)/},
+  {k:'unresolved',label:'מה נסגר ומה פתוח',re:/(מה נסגר|נסגר ומה|לא בוצע|לא ביצע|טרם בוצע|מה עדיין לא|עוד לא ביצע)/},
+  {k:'outcomes',label:'מה קרה אחרי העצות',re:/(האם .{0,30}עבד|האם .{0,30}עזר|האם .{0,30}הצליח|העצות שלי עבדו|תוצאות? של העצ|מה יצא מ)/},
+  {k:'timeline',label:'התפתחות לאורך זמן',re:/(ציר זמן|התפתח|התפתחות|לאורך הזמן|לאורך זמן|לאורך השנים|הפגישות האחרונות|בחצי השנה|בחודש האחרון|בשנה האחרונה|בשבוע האחרון|בחודשים האחרונים)/},
   {k:'why',label:'הנימוק לעצה',re:/(למה|מדוע|מה הנימוק|מה הסיבה|על סמך מה)/},
   {k:'previous',label:'מה נאמר בפעם הקודמת',re:/(בפעם הקודמת|בפגישה הקודמת|בפגישה האחרונה|בפעם האחרונה|לאחרונה)/},
   {k:'changed',label:'מה השתנה',re:/(מה השתנה|השתנה מאז|מאז הפגישה|התקדמות|מה קרה בעקבות|מה קרה מאז|מה קרה אחרי|התפתח|התפתחה|מה כבר ניסינו|תוצאות ידועות)/},
   {k:'open',label:'מה עדיין פתוח',re:/(פתוח|פתוחים|מעקב|מעקבים|לבדוק|לחזור|לא בוצע|היה אמור|משימות|התחייב)/},
   {k:'exceptions',label:'חריגים',re:/(חריג|חריגים|יוצא דופן|לא חל)/},
   {k:'principles',label:'עקרונות חוזרים',re:/(עקרונ|עיקרון|דפוס|דפוסים|מתודולוגיה|שיטה שלי)/},
+  {k:'recurring',label:'מה חוזר',re:/(חוזר|חוזרת|חוזרים|חוזרות|חזרה מספר|שוב ושוב|בכל פעם|כל פעם)/},
   {k:'questions',label:'שאלות שהיועץ שואל',re:/(אילו שאלות|איזה שאלות|מה אני שואל|שאלות אני)/},
   {k:'similar',label:'מקרים דומים',re:/(דומה|דומים|דומות|נתקלתי|כבר ראיתי)/},
   {k:'problems',label:'בעיות',re:/(בעיה|בעיות|הקושי|קשיים|חוזרת אצלו|חוזר אצלו|חוזרות)/},
@@ -707,6 +715,62 @@ function verifyEvidence(ans){
   ans.verified=true;
   return ans;
 }
+/* ---------- שכבת זמן: חלון זמן, מושגים חוזרים, קישור עצה לתוצאה ---------- */
+// מספר + שם עצם בעברית תקינה: „עצה אחת”, „2 עצות”
+const cnt=(n,one,many)=>n===1?one:n+' '+many;
+const HEB_NUM={'שתי':2,'שני':2,'שלוש':3,'שלושה':3,'ארבע':4,'ארבעה':4,'חמש':5,'חמישה':5,'שש':6,'עשר':10};
+function parseWindow(q){
+  q=String(q||'');
+  const n=q.match(/(\d+|שתי|שני|שלוש|שלושה|ארבע|ארבעה|חמש|חמישה|שש|עשר)\s+ה?פגישות\s+ה?אחרונות/);
+  if(n)return{kind:'last',n:+n[1]||HEB_NUM[n[1]],label:(+n[1]||HEB_NUM[n[1]])+' הפגישות האחרונות'};
+  const d=[[/בשבוע האחרון/,7,'השבוע האחרון'],[/בחודש האחרון/,31,'החודש האחרון'],[/בחודשים האחרונים/,92,'שלושת החודשים האחרונים'],[/בחצי השנה האחרונה/,183,'חצי השנה האחרונה'],[/בשנה האחרונה/,366,'השנה האחרונה']].find(([re])=>re.test(q));
+  return d?{kind:'since',from:addDays(todayISO(),-d[1]),label:d[2]}:null;
+}
+function applyWindow(ms,w){
+  if(!w)return ms;
+  if(w.kind==='last')return ms.slice(0,w.n); // ms ממוין מהחדש לישן
+  return ms.filter(m=>m.date>=w.from);
+}
+// מושג = קבוצת מילים נרדפות, או שורש של מילה משמעותית. כך „ויכוחים” ו„מריבות” נספרים כאותו נושא.
+const CONCEPT_STOP=new Set('המלצתי המלצנו סיכמנו הוחלט בפגישה הבאה נבדוק לבדוק בפעם השלישית שלוש מתוך במפורש לפני אחרי שלפני תאמר תחזור שתבצע הקטנים קטנים שיחה בשיחה לשיחה השיחה ויציגו אותו כעמדה'.split(' '));
+function conceptKeys(text,exclude=new Set()){
+  const keys=new Map();
+  for(const tok of tokenize(text)){
+    if(CONCEPT_STOP.has(tok)||exclude.has(tok))continue;
+    const st=stems(tok);
+    const gi=SYN.findIndex(g=>g.some(w=>st.some(x=>x===w||(w.length>=3&&x.startsWith(w))||(x.length>=4&&w.startsWith(x)))));
+    if(gi>=0){keys.set('g'+gi,SYN[gi][0]);continue}
+    const base=st[st.length-1];
+    if(base.length>=4&&!CONCEPT_STOP.has(base)&&!exclude.has(base))keys.set(base,base);
+  }
+  return keys;
+}
+function recurringConcepts(ms,types=['problem','observations','results','contradictions']){
+  const names=new Set(allPeople().flatMap(p=>tokenize(p.name)));
+  const map=new Map();
+  for(const m of ms){const an=m.analysis||{};
+    const items=types.flatMap(k=>k==='problem'?(an.problem?[an.problem]:[]):(an[k]||[]));
+    for(const it of items)for(const [k,label] of conceptKeys(it.text,names)){
+      if(!map.has(k))map.set(k,{key:k,label,occ:[]});map.get(k).occ.push({m,it});
+    }
+    for(const t of m.tags||[]){const k='tag:'+t;if(!map.has(k))map.set(k,{key:k,label:t,tag:true,occ:[]});map.get(k).occ.push({m,it:null})}
+  }
+  return[...map.values()].map(c=>({...c,meetings:new Set(c.occ.map(o=>o.m.id)).size,people:new Set(c.occ.map(o=>o.m.person)).size}))
+    .filter(c=>c.meetings>=2).sort((a,b)=>b.meetings-a.meetings||b.people-a.people||(a.tag?1:0)-(b.tag?1:0));
+}
+// קישור עצה לתוצאה: התוצאות שדווחו בפגישות המאוחרות של אותו אדם, עד העצה הבאה. זה קישור לפי סדר הזמן, ולכן הסקה.
+function adviceOutcomes(ms){
+  const out=[];
+  for(const m of [...ms].sort((a,b)=>a.date.localeCompare(b.date))){
+    for(const a of m.analysis?.advice||[]){
+      const later=meetingsOf(m.person).filter(x=>x.date>m.date).sort((x,y)=>x.date.localeCompare(y.date));
+      const res=[];for(const x of later){for(const r of x.analysis?.results||[])res.push({m:x,it:r});if((x.analysis?.advice||[]).length)break}
+      out.push({m,a,later,results:res,status:res.length?'reported':later.length?'not_reported':'no_later_meeting'});
+    }
+  }
+  return out;
+}
+
 /* ---------- חבילת ראיות וחוזה סינתזה ----------
    שכבה 1 (כאן): בונה חבילת ראיות לכל שאלה, בלי קשר לסוג השאלה.
    שכבה 2 (שרת NAS, בעתיד): מקבלת את אותה חבילה, מוסיפה שליפה סמנטית,
@@ -777,8 +841,11 @@ function askSecondBrain(question,scope){
     ans.related=allPeople().slice(0,8).map(p=>({label:p.name,meta:p.count+' פגישות',scope:{type:'person',id:p.name}}));
     ans.needsScope=true;return ans;
   }
-  const ms=meetingsIn(sc);
+  const win=parseWindow(q);
+  const ms=applyWindow(meetingsIn(sc),win);
+  ans.window=win;
   ans.coverage=coverageOf(sc,ms,{method:intent.k==='questions'||intent.k==='principles'});
+  if(win)ans.coverage.text='חלון זמן: '+win.label+'. '+ans.coverage.text;
   if(!ms.length){ans.unknowns.push('אין הקלטות בהיקף הזה.');return ans}
   const chrono=[...ms].sort((a,b)=>a.date.localeCompare(b.date));
   const H={
@@ -847,6 +914,76 @@ function askSecondBrain(question,scope){
       if(fs.length)ans.answer.push('שאלות להמשך, לפי מה שנשאר פתוח: '+fs.map(f=>f.title).join(' · '));
       ans.answer.push('ההכנה מציגה רק מה שתועד. היא לא מציעה עצות חדשות.');
     },
+    timeline(){
+      // ציר זמן מלא: כל פגישה היא קבוצה, ובתוכה מה נאמר בה, לפי הסדר
+      const first=chrono[0],last=chrono[chrono.length-1];
+      ans.answer.push(chrono.length===1?`פגישה אחת בהיקף, ב־${formatDate(first.date)}.`:`${chrono.length} פגישות, מ־${formatDate(first.date)} עד ${formatDate(last.date)}.`);
+      let nA=0,nR=0;
+      for(const m of chrono){const an=m.analysis||{},sec=formatDate(m.date)+' · '+m.title+(sc.type==='global'?' · '+m.person:'');
+        ans.findings.push({section:sec,label:'הקלטה',text:m.title,kind:'manual',ev:null,route:'case/'+m.id});
+        if(an.problem)ans.findings.push({...finding(m,an.problem,'בעיה'),section:sec});
+        for(const a of an.advice||[]){nA++;ans.findings.push({...finding(m,a,a.type==='decision'?'החלטה':'עצה'),section:sec});const r=reasonFor(an,a);if(r)ans.findings.push({...finding(m,r,'נימוק'),section:sec})}
+        for(const r of an.results||[]){nR++;ans.findings.push({...finding(m,r,'מה דווח'),section:sec})}
+        for(const c of an.contradictions||[])ans.findings.push({...finding(m,c,'חריג'),section:sec});
+        for(const f of data.followups.filter(x=>x.meetingId===m.id))ans.findings.push({section:sec,label:'מעקב · '+(f.done?'הושלם':dueLabel(f.due).t),text:f.title,kind:'manual',ev:null});
+      }
+      const names=new Set(chrono.map(m=>m.person)),ids=new Set(chrono.map(m=>m.id));
+      const ch=adviceChanges().filter(x=>names.has(x.person)&&ids.has(x.later.id)&&ids.has(x.earlier.id)).length;
+      ans.answer.push(`לאורך התקופה: ${cnt(nA,'עצה או החלטה אחת','עצות או החלטות')}, ${cnt(nR,'דיווח אחד','דיווחים')} על מה שקרה בפועל${ch?`, והעצה השתנתה ${ch===1?'פעם אחת':ch+' פעמים'}`:''}.`);
+    },
+    recurring(){
+      const rc=recurringConcepts(ms);
+      if(!rc.length){ans.answer.push('לא נמצא נושא שחוזר ביותר מהקלטה אחת בהיקף הזה.');return}
+      ans.answer.push(`${cnt(rc.length,'נושא אחד חוזר','נושאים חוזרים')} ביותר מהקלטה אחת. „חוזר” כאן פירושו שהמילה או מילה נרדפת לה הופיעה בכמה הקלטות. זו התאמה לשונית, לא הכרעה.`);
+      for(const c of rc.slice(0,6)){
+        const sec=(c.tag?'תגית: ':'')+c.label;
+        ans.findings.push({section:sec,label:`${c.meetings} הקלטות · ${cnt(c.people,'אדם אחד','אנשים')}`,text:c.people>1?'חוזר אצל כמה אנשים':'חוזר אצל אותו אדם',kind:'pattern',ev:null});
+        const seen=new Set();for(const o of c.occ.sort((a,b)=>a.m.date.localeCompare(b.m.date))){
+          const k=o.m.id+(o.it?o.it.id:'');if(seen.has(k))continue;seen.add(k);
+          // לתגית אין משפט מקור, ולכן הראיה היא ההקלטה שמסומנת בה
+          ans.findings.push(o.it?{...finding(o.m,o.it,o.m.person+' · '+formatDate(o.m.date)),section:sec}:{section:sec,label:o.m.person+' · '+formatDate(o.m.date)+' · מסומנת בתגית',text:o.m.title,kind:'manual',ev:null,route:'case/'+o.m.id})}
+      }
+      // עצות שחזרו: עצות מהקלטות שונות שחולקות לפחות שני מושגים
+      const adv=chrono.flatMap(m=>(m.analysis?.advice||[]).map(a=>({m,a,k:new Set(conceptKeys(a.text).keys())})));
+      for(let i=0;i<adv.length;i++)for(let j=i+1;j<adv.length;j++){if(adv[i].m.id===adv[j].m.id)continue;
+        const shared=[...adv[i].k].filter(x=>adv[j].k.has(x));
+        if(shared.length>=2){const sec='עצה שחזרה';ans.findings.push({...finding(adv[i].m,adv[i].a,adv[i].m.person+' · '+formatDate(adv[i].m.date)),section:sec});ans.findings.push({...finding(adv[j].m,adv[j].a,adv[j].m.person+' · '+formatDate(adv[j].m.date)),section:sec})}}
+    },
+    outcomes(){
+      const list=adviceOutcomes(ms);
+      if(!list.length){ans.answer.push('לא נמצאו עצות בהיקף הזה.');return}
+      const rep=list.filter(x=>x.status==='reported').length;
+      ans.answer.push(`${cnt(list.length,'עצה אחת','עצות')}. ${rep===1?'לאחת מהן':'ל־'+rep+' מהן'} תועד בהמשך מה קרה. הקישור בין עצה לתוצאה נעשה לפי סדר הפגישות של אותו אדם, ולכן הוא הסקה.`);
+      for(const x of list){const sec='עצה · '+x.m.person+' · '+formatDate(x.m.date);
+        ans.findings.push({...finding(x.m,x.a,'העצה'),section:sec});
+        for(const r of x.results)ans.findings.push({...finding(r.m,r.it,'דווח ב־'+formatDate(r.m.date)),section:sec,note:'מקושר לעצה לפי סדר הזמן.'});
+        if(x.status==='not_reported')ans.unknowns.push(`לעצה מ־${formatDate(x.m.date)} (${x.m.person}) היו פגישות המשך, אבל לא תועד בהן מה קרה.`);
+        if(x.status==='no_later_meeting')ans.unknowns.push(`לעצה מ־${formatDate(x.m.date)} (${x.m.person}) עוד אין פגישת המשך.`);
+      }
+    },
+    unresolved(){
+      const ids=new Set(ms.map(m=>m.id)),names=new Set(ms.map(m=>m.person));
+      const fs=data.followups.filter(f=>sc.type==='recording'||sc.type==='case'?ids.has(f.meetingId):sc.type==='global'||names.has(f.person));
+      const open=fs.filter(f=>!f.done),done=fs.filter(f=>f.done);
+      const noOutcome=adviceOutcomes(ms).filter(x=>x.status!=='reported');
+      ans.answer.push(`${open.length} מעקבים פתוחים${open.some(f=>f.due&&f.due<todayISO())?' (חלקם באיחור)':''}, ${done.length} נסגרו, ו־${noOutcome.length} עצות שעוד לא תועד מה קרה איתן.`);
+      for(const f of open){const fm=data.meetings.find(x=>x.id===f.meetingId);const src=fm&&(fm.analysis?.followups||[]).find(it=>it.text===f.title);ans.findings.push(src?{...finding(fm,src,f.person+' · '+dueLabel(f.due).t),section:'פתוח'}:{section:'פתוח',label:f.person+' · '+dueLabel(f.due).t,text:f.title,kind:'manual',ev:null})}
+      for(const f of done)ans.findings.push({section:'נסגר',label:f.person,text:f.title,kind:'manual',ev:null});
+      for(const x of noOutcome)ans.findings.push({...finding(x.m,x.a,x.m.person+' · '+formatDate(x.m.date)),section:'עצות בלי תוצאה מתועדת'});
+    },
+    firstSeen(){
+      const topic=q.replace(/[?!.,״"׳']/g,' ').split(/\s+/).filter(w=>w.length>1&&!/^(מתי|התחיל|התחילה|התחילו|הופיע|הופיעה|הופיעו|לראשונה|מאיזה|שלב|הבעיה|הנושא|הזאת|הזה|הזו|של|אצל|אצלו|אצלה|עם)$/.test(w)).join(' ').trim();
+      const keys=[...conceptKeys(topic).keys()];
+      if(!keys.length){ans.unknowns.push('לא זיהיתי על איזה נושא השאלה. אפשר לכתוב את הנושא במפורש, למשל „מתי התחילו הוויכוחים?”.');return}
+      const occ=[];
+      for(const m of chrono){const an=m.analysis||{};for(const k of ITEM_KEYS){const arr=k==='problem'?(an.problem?[an.problem]:[]):(an[k]||[]);
+        for(const it of arr){const ck=conceptKeys(it.text);if(keys.some(x=>ck.has(x)))occ.push({m,it})}}}
+      if(!occ.length){ans.answer.push(`לא נמצאה הופעה של „${topic}” בהיקף הזה.`);return}
+      const f=occ[0];
+      ans.answer.push(`„${topic}” הופיע לראשונה ב־${formatFull(f.m.date)}, בהקלטה „${f.m.title}”${sc.type==='global'?' ('+f.m.person+')':''}. בסך הכול ${occ.length} הופעות ב־${new Set(occ.map(o=>o.m.id)).size} הקלטות.`);
+      ans.unknowns.push('„לראשונה” מתייחס רק להקלטות שבמאגר. ייתכן שהנושא עלה עוד קודם, בשיחות שלא הוקלטו או לא יובאו.');
+      for(const o of occ)ans.findings.push({...finding(o.m,o.it,formatDate(o.m.date)+' · '+o.m.person),section:'הופעות לפי סדר הזמן'});
+    },
     adviceDossier(){
       // היקף של עצה אחת: העצה, הנימוק, הראיה, מה קרה אחריה, ואיך העצה התפתחה אצל אותו אדם
       const r=adviceRef(sc.id);if(!r){ans.unknowns.push('העצה לא נמצאה.');return}
@@ -870,7 +1007,10 @@ function askSecondBrain(question,scope){
     changedMind(){
       const names=new Set(ms.map(m=>m.person));
       const ch=adviceChanges().filter(x=>names.has(x.person)&&(sc.type!=='recording'||x.later.id===sc.id||x.earlier.id===sc.id));
-      for(const x of ch){ans.findings.push(finding(x.earlier,x.a1,x.person+' · קודם · '+formatDate(x.earlier.date)));ans.findings.push(finding(x.later,x.a2,x.person+' · אחר כך · '+formatDate(x.later.date)))}
+      for(const x of ch){ans.findings.push(finding(x.earlier,x.a1,x.person+' · קודם · '+formatDate(x.earlier.date)));ans.findings.push(finding(x.later,x.a2,x.person+' · אחר כך · '+formatDate(x.later.date)));
+        const why=reasonFor(x.later.analysis||{},x.a2);
+        if(why)ans.findings.push(finding(x.later,why,'הנימוק שנאמר בפגישה המאוחרת'));else ans.unknowns.push(`לא נאמר נימוק מפורש לשינוי אצל ${x.person} ב־${formatDate(x.later.date)}.`);
+        const res=(x.later.analysis?.results||[]);for(const r of res)ans.findings.push(finding(x.later,r,'מה דווח לפני השינוי'))}
       for(const m of chrono)for(const c of m.analysis?.contradictions||[])ans.findings.push(finding(m,c,'חריג · '+m.person));
       ans.answer.push(ch.length?`נמצאו ${ch.length} רצפים שבהם העצה לאותו אדם השתנתה. הם מוצגים לפי סדר הזמן.`:'לא נמצאה עצה שהשתנתה בהיקף הזה.');
       ans.answer.push('המערכת לא מכריעה אם שינוי הוא סתירה, חידוד או התאמה לנסיבות.');
@@ -936,11 +1076,11 @@ function askSecondBrain(question,scope){
   return verifyEvidence(ans);
 }
 const ASK_SUGGEST={
-  person:['מה אמרתי לו בפעם הקודמת?','מה עדיין פתוח?','אילו עצות כבר נתתי?','מה השתנה?','למה המלצתי את זה?','תכין אותי לפגישה הבאה'],
+  person:['מה אמרתי לו בפעם הקודמת?','מה עדיין פתוח?','אילו עצות כבר נתתי?','מה השתנה?','למה המלצתי את זה?','תכין אותי לפגישה הבאה','איך זה התפתח לאורך הזמן?','מה חוזר אצלו?','האם העצות שלי עבדו?','מה נסגר ומה עדיין פתוח?'],
   recording:['מה היו הבעיות?','מה המלצתי?','למה המלצתי את זה?','מה דורש מעקב?','אילו חריגים נאמרו?','מצא מקרים דומים'],
-  case:['איך המקרה התפתח?','מה כבר ניסינו?','אילו עצות ניתנו?','מה עדיין פתוח?','תכין אותי לפגישה הבאה','איפה שיניתי את דעתי?'],
+  case:['איך המקרה התפתח?','מה כבר ניסינו?','האם העצות עבדו?','מה נסגר ומה עדיין פתוח?','תכין אותי לפגישה הבאה','איפה שיניתי את דעתי?'],
   advice:['למה המלצתי את זה?','מה קרה אחרי העצה הזו?','איך העצה התפתחה?','איפה שיניתי את דעתי?','מצא מקרים דומים'],
-  global:['מצא מקרים דומים לריבים בזוגיות','אילו עקרונות חוזרים אצלי?','אילו חריגים קיימים?','איפה שיניתי את דעתי?','אילו שאלות אני נוהג לשאול?','מה עדיין פתוח?']
+  global:['מה חוזר הכי הרבה בייעוצים?','מה השתנה בחודש האחרון?','האם העצות שלי עבדו?','מצא מקרים דומים לריבים בזוגיות','אילו עקרונות חוזרים אצלי?','אילו חריגים קיימים?','איפה שיניתי את דעתי?','אילו שאלות אני נוהג לשאול?','מה עדיין פתוח?']
 };
 /* ---------- ממשק העוזר ---------- */
 let askScope={type:'global'};
@@ -1941,4 +2081,4 @@ if('serviceWorker'in navigator){
   window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
 /* debug/test hook */
-window.__consulting={retrieveEvidence,buildSynthesisRequest,validateSynthesis,allCases,casesOfPerson,casesOfRecording,recordingsOfCase,SYNTHESIS,askSecondBrain,detectIntent,scopeFromRoute,SEED,load,save,analyzeTranscript,splitSegments,searchAll,tokenize,variants,relatedPrinciples,linkedCases,allPeople,allAdvice,adviceChanges,zmanimFor,hebrewDate,gematria,importMeeting,validBackup,get data(){return data},navigate,esc};
+window.__consulting={parseWindow,conceptKeys,recurringConcepts,adviceOutcomes,retrieveEvidence,buildSynthesisRequest,validateSynthesis,allCases,casesOfPerson,casesOfRecording,recordingsOfCase,SYNTHESIS,askSecondBrain,detectIntent,scopeFromRoute,SEED,load,save,analyzeTranscript,splitSegments,searchAll,tokenize,variants,relatedPrinciples,linkedCases,allPeople,allAdvice,adviceChanges,zmanimFor,hebrewDate,gematria,importMeeting,validBackup,get data(){return data},navigate,esc};
