@@ -916,6 +916,7 @@ function render(){
   el('view').innerHTML=views[r.key]();
   el('context').innerHTML=contextFor(r);
   bind();
+  applyAnimRate();
   if(window.__fx)window.__fx.poke();
   document.title=r.key==='home'?'מאגר הייעוץ':title+' · מאגר הייעוץ';
   currentRouteKey=routeId();
@@ -1191,11 +1192,19 @@ function initPalette(){
 }
 /* ---------- תנועה: מלאה / עדינה / כבויה ---------- */
 const MOTION=[{k:'full',n:'מלאה'},{k:'calm',n:'עדינה'},{k:'off',n:'כבויה'}];
+// מהירות יחסית: מלאה = חצי מהמקור, עדינה = רבע. שום מצב חוץ מ„כבויה” לא עוצר.
+const SPEED={full:.5,calm:.25,off:0};
+function applyAnimRate(){
+  if(!document.getAnimations)return;
+  const r=SPEED[motionMode()]||1;
+  for(const a of document.getAnimations()){const n=a.animationName||'';a.playbackRate=n==='rise'?(motionMode()==='calm'?.7:1):r}
+}
 function motionMode(){return document.documentElement.dataset.motion||'full'}
 function applyMotion(k){
   document.documentElement.dataset.motion=k;
   const s=document.querySelector('#motion-btn .motion-state');if(s)s.textContent=MOTION.find(m=>m.k===k).n;
   if(window.__fx)window.__fx.mode(k);
+  applyAnimRate();
 }
 function initMotion(){
   let k=null;try{k=localStorage.getItem('consultingMotion')}catch{}
@@ -1209,7 +1218,7 @@ function initMotion(){
 function initFx(){
   const c=el('fx');if(!c||!c.getContext||typeof requestAnimationFrame!=='function')return;
   const ctx=c.getContext('2d');if(!ctx)return;
-  let W=0,H=0,dpr=1,nodes=[],col=null,mode='full',raf=0,last=0,prev=0,lsx='',lsy='';
+  let W=0,H=0,dpr=1,nodes=[],col=null,mode='full',raf=0,last=0,prev=0,lsx='',lsy='',vt=0,lastReal=0;
   const P={x:.62,y:.25,tx:.62,ty:.25,active:false};
   const rgb=h=>{h=String(h||'').trim().replace('#','');if(h.length===3)h=h.split('').map(x=>x+x).join('');const n=parseInt(h,16);return isNaN(n)?[14,107,98]:[n>>16&255,n>>8&255,n&255]};
   function readColors(){const cs=getComputedStyle(document.documentElement);col={a:rgb(cs.getPropertyValue('--accent')),b:rgb(cs.getPropertyValue('--accent-2')),dark:document.documentElement.dataset.theme==='dark'}}
@@ -1224,12 +1233,12 @@ function initFx(){
   const rgba=(c3,a)=>`rgba(${c3[0]},${c3[1]},${c3[2]},${a})`;
   function draw(t){
     if(!col)readColors();
-    const moving=mode==='full';
+    const sp=SPEED[mode]||0,moving=sp>0;
     ctx.clearRect(0,0,W,H);
     const k=col.dark?1:.62, pulse=mode==='off'?0:beat(t);
     // אלומות אור רכות שנעות לאט, ונמשכות מעט לכיוון הסמן
     if(!P.active&&moving){P.tx=.5+.28*Math.cos(t/40000);P.ty=.35+.18*Math.sin(t/32000)}
-    P.x+=(P.tx-P.x)*.012;P.y+=(P.ty-P.y)*.012;
+    P.x+=(P.tx-P.x)*.024*sp;P.y+=(P.ty-P.y)*.024*sp;
     const lights=[
       {x:W*(.72+.06*Math.sin(t/60000)),y:H*(.18+.05*Math.cos(t/50000)),r:Math.max(W,H)*.42,c:col.a,a:.20},
       {x:W*(.18+.05*Math.cos(t/70000)),y:H*(.82+.04*Math.sin(t/55000)),r:Math.max(W,H)*.40,c:col.b,a:.18},
@@ -1241,13 +1250,13 @@ function initFx(){
     // רשת הקשרים: נקודות ידע שמתחברות כשהן קרובות
     const mx=W*P.x,my=H*P.y,R=150;
     for(const n of nodes){
-      if(moving){n.x+=n.vx;n.y+=n.vy;if(n.x<-20)n.x=W+20;if(n.x>W+20)n.x=-20;if(n.y<-20)n.y=H+20;if(n.y>H+20)n.y=-20;
-        const dx=mx-n.x,dy=my-n.y,d=Math.hypot(dx,dy);if(d<220&&d>1){n.x+=dx/d*.025;n.y+=dy/d*.025}}
+      if(moving){n.x+=n.vx*sp;n.y+=n.vy*sp;if(n.x<-20)n.x=W+20;if(n.x>W+20)n.x=-20;if(n.y<-20)n.y=H+20;if(n.y>H+20)n.y=-20;
+        const dx=mx-n.x,dy=my-n.y,d=Math.hypot(dx,dy);if(d<220&&d>1){n.x+=dx/d*.05*sp;n.y+=dy/d*.05*sp}}
     }
     ctx.lineWidth=1;
     for(let i=0;i<nodes.length;i++){const a=nodes[i];for(let j=i+1;j<nodes.length;j++){const b=nodes[j];const d=Math.hypot(a.x-b.x,a.y-b.y);if(d<R){
       const near=Math.max(0,1-Math.hypot((a.x+b.x)/2-mx,(a.y+b.y)/2-my)/260);
-      ctx.strokeStyle=rgba(a.t?col.b:col.a,(1-d/R)*(.15+.18*near+.05*pulse)*k);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke()}}}
+      ctx.strokeStyle=rgba(a.t?col.b:col.a,(1-d/R)*(.14+.16*near+.03*pulse)*k);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke()}}}
     for(const n of nodes){
       const tw=.7+.3*Math.sin(t/4200+n.ph);const near=Math.max(0,1-Math.hypot(n.x-mx,n.y-my)/220);
       const cc=n.t?col.b:col.a;
@@ -1260,13 +1269,14 @@ function initFx(){
       if(sx!==lsx||sy!==lsy){lsx=sx;lsy=sy;const r=document.documentElement.style;r.setProperty('--sx',sx);r.setProperty('--sy',sy)}}
   }
   // תנועה עדינה לא צריכה 60 פריימים: מספיק כ־30, וזה חוסך סוללה
-  function loop(t){if(t-prev>=32){prev=t;draw(t)}raf=mode==='off'?0:requestAnimationFrame(loop)}
-  function start(){cancelAnimationFrame(raf);raf=0;if(mode==='off'){draw(performance.now())}else raf=requestAnimationFrame(loop)}
-  addEventListener('resize',()=>{resize();if(mode==='off')draw(performance.now())});
+  // זמן וירטואלי: מתקדם לפי מהירות המצב, כך שכל האנימציות מאטות יחד
+  function loop(t){const dt=lastReal?Math.min(t-lastReal,100):0;lastReal=t;vt+=dt*(SPEED[mode]||0);if(t-prev>=32){prev=t;draw(vt)}raf=mode==='off'?0:requestAnimationFrame(loop)}
+  function start(){cancelAnimationFrame(raf);raf=0;lastReal=0;if(mode==='off'){draw(vt)}else raf=requestAnimationFrame(loop)}
+  addEventListener('resize',()=>{resize();if(mode==='off')draw(vt)});
   addEventListener('pointermove',e=>{P.active=true;P.tx=e.clientX/W;P.ty=e.clientY/H},{passive:true});
   document.addEventListener('pointerleave',()=>{P.active=false});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(raf);raf=0}else start()});
-  new MutationObserver(()=>{readColors();if(mode==='off')draw(performance.now())}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme','data-palette']});
+  new MutationObserver(()=>{readColors();if(mode==='off')draw(vt)}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme','data-palette']});
   /* קו הדופק: מוניטור עם צורת פעימה אמיתית, ראש כתיבה שנע מימין לשמאל, שובל שדוהה ורשת מדידה */
   const g0=(x,c0,w)=>Math.exp(-((x-c0)**2)/(2*w*w));
   // פעימה אחת: גל P, קומפלקס QRS חד, וגל T רחב
@@ -1280,7 +1290,7 @@ function initFx(){
     const w=c2.clientWidth,h=c2.clientHeight;if(!w||!h)return;
     if(Math.round(w*dpr)!==c2.width||Math.round(h*dpr)!==c2.height){c2.width=Math.round(w*dpr);c2.height=Math.round(h*dpr)}
     pw=w;ph=h;const g=pctx;g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,w,h);
-    const k=col.dark?1:.9,mid=h*.62,amp=h*.5,sweeping=mode==='full';
+    const k=col.dark?1:.9,mid=h*.62,amp=h*.4,sweeping=mode!=='off';
     // רשת מדידה דקה, דוהה לכיוון הקצוות
     const fade=g.createLinearGradient(0,0,w,0);fade.addColorStop(0,'rgba(0,0,0,0)');fade.addColorStop(.15,'#000');fade.addColorStop(.85,'#000');fade.addColorStop(1,'rgba(0,0,0,0)');
     g.save();
@@ -1323,7 +1333,7 @@ function initFx(){
   }
 
   resize();
-  window.__fx={mode(m){mode=m;start()},poke(){if(mode==='off')draw(performance.now())}};
+  window.__fx={mode(m){mode=m;start()},poke(){if(mode==='off')draw(vt)}};
   mode=motionMode();start();
 }
 

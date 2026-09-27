@@ -767,13 +767,13 @@ body::after{background-image:linear-gradient(var(--grid-tint) 1px,transparent 1p
 .step-advice .kitem{box-shadow:inset 0 1px 0 var(--hilite),0 14px 34px -12px var(--glow)}
 
 /* ---------- motion: alive, slow, gentle ---------- */
-@keyframes aurora{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(-2%,1.5%,0) scale(1.04)}100%{transform:translate3d(1.5%,-1%,0) scale(1.02)}}
+@keyframes aurora{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(-1.2%,1%,0) scale(1.025)}100%{transform:translate3d(1%,-.6%,0) scale(1.012)}}
 @keyframes breathe{0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 -2px 0 rgba(0,0,0,.18),0 4px 14px -6px var(--glow)}50%{box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 -2px 0 rgba(0,0,0,.18),0 8px 26px -4px var(--glow)}}
-@keyframes heartbeat{0%,100%{transform:scale(1)}8%{transform:scale(1.12)}16%{transform:scale(1)}24%{transform:scale(1.07)}36%{transform:scale(1)}}
+@keyframes heartbeat{0%,100%{transform:scale(1)}8%{transform:scale(1.08)}16%{transform:scale(1)}24%{transform:scale(1.04)}36%{transform:scale(1)}}
 @keyframes pulse-ring{0%{box-shadow:0 0 0 0 var(--glow)}40%,100%{box-shadow:0 0 0 7px transparent}}
 @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @keyframes shimmer{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.5px)}}
 @keyframes orb{0%,100%{transform:scale(1);opacity:.5}50%{transform:scale(1.04);opacity:.7}}
 
 body::before{animation:aurora 90s ease-in-out infinite alternate;will-change:transform;inset:-6%}
@@ -837,10 +837,7 @@ html,body{overflow-x:clip}
 .section-head h2::before{content:"";width:6px;height:6px;border-radius:2px;background:var(--grad);box-shadow:0 0 10px var(--glow);transform:rotate(45deg);animation:breathe-bar 9s ease-in-out infinite}
 
 /* calm mode: nothing moves, light still breathes */
-[data-motion="calm"] body::before,[data-motion="calm"] .stat-strip a,[data-motion="calm"] .view>*,[data-motion="calm"] .stack>*,[data-motion="calm"] .context>*,[data-motion="calm"] .chain-step{animation:none}
-[data-motion="calm"] .privacy-dot,[data-motion="calm"] .nav-count-alert,[data-motion="calm"] .zm-list li.zm-next span:first-child::before{animation:pulse-ring 4.8s ease-out infinite}
-[data-motion="calm"] .hero::before{animation:orb-calm 20s ease-in-out infinite}
-@keyframes orb-calm{0%,100%{opacity:.45}50%{opacity:.85}}
+/* calm: same motion as full, at half its speed (set via playbackRate in JS) */
 
 .motion-btn .motion-state{margin-inline-start:auto;font-size:12px;color:var(--muted)}
 
