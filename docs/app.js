@@ -19,6 +19,12 @@ const SEED = {
     {title:'לא מקבלים החלטה גדולה מתוך סערה',description:'מפרקים החלטה לניסויים קטנים ואוספים מידע לפני צעד בלתי הפיך.'},
     {title:'עצירה היא כלי תקשורת, לא נטישה',description:'מגדירים מראש זמן חזרה לשיחה כדי שהפסקה תייצר ביטחון.'}
   ],
+  // תיק (case) הוא ישות נפרדת: בעיה או נושא מתמשך. אדם יכול להיות בכמה תיקים, תיק יכול לכלול כמה אנשים וכמה הקלטות, והקלטה יכולה להשתייך לכמה תיקים.
+  cases:[
+    {id:'c1',title:'תקשורת בזמן קונפליקט',status:'open',people:['דניאל'],recordingIds:['m2','m4'],tags:['תקשורת','ויסות']},
+    {id:'c2',title:'גבולות מול המשפחה המורחבת',status:'open',people:['משפחת לוי'],recordingIds:['m1'],tags:['גבולות','משפחה']},
+    {id:'c3',title:'שינוי מקצועי',status:'open',people:['נועה'],recordingIds:['m3'],tags:['קריירה','החלטות']}
+  ],
   followups:[
     {id:'f1',person:'דניאל',title:'לבדוק איך עבד כלל עשר הדקות',due:'2026-09-14',done:true,meetingId:'m2'},
     {id:'f2',person:'משפחת לוי',title:'מה הייתה תגובת המשפחה לגבול החדש?',due:'2026-09-16',done:false,meetingId:'m1'},
@@ -101,8 +107,8 @@ const NAV=[
     {key:'contradictions',label:'סתירות וחריגים',icon:'split',count:()=>contradictionCount()}
   ]}
 ];
-const PARENT={case:'recordings',person:'people',principle:'principles'};
-const KNOWN=['home','recordings','people','followups','advice','principles','contradictions','search','case','person','principle'];
+const PARENT={case:'recordings',person:'people',principle:'principles',file:'people'};
+const KNOWN=['home','recordings','people','followups','advice','principles','contradictions','search','case','person','principle','file'];
 function parseRoute(){
   let h=(location.hash||'').replace(/^#/,'');
   if(h.startsWith('/'))h=h.slice(1);
@@ -214,6 +220,12 @@ function ensureAllAnalysis(){
     if(!m.analysis||m.analysis.version!==ANALYSIS_VERSION){m.analysis=analyzeTranscript(m.transcript);changed=true}
   }
   data.principles.forEach((p,i)=>{if(!p.id){p.id='p'+(i+1);changed=true}});
+  // מאגר מגרסה קודמת: אין בו תיקים. מוסיפים רק את תיקי הדוגמה שההקלטות שלהם קיימות. לא מאחדים אוטומטית לפי אדם.
+  if(!Array.isArray(data.cases)){
+    const ids=new Set(data.meetings.map(m=>m.id));
+    data.cases=structuredClone(SEED.cases).map(c=>({...c,recordingIds:c.recordingIds.filter(id=>ids.has(id))})).filter(c=>c.recordingIds.length);
+    changed=true;
+  }
   if(changed)save();
 }
 function reasonFor(an,adv){
@@ -222,6 +234,11 @@ function reasonFor(an,adv){
 }
 
 /* ---------- נגזרות מהנתונים ---------- */
+function allCases(){return Array.isArray(data.cases)?data.cases:[]}
+function caseById(id){return allCases().find(c=>c.id===id)||null}
+function casesOfRecording(mid){return allCases().filter(c=>(c.recordingIds||[]).includes(mid))}
+function casesOfPerson(name){return allCases().filter(c=>(c.people||[]).includes(name)||(c.recordingIds||[]).some(id=>data.meetings.find(m=>m.id===id)?.person===name))}
+function recordingsOfCase(c){return(c.recordingIds||[]).map(id=>data.meetings.find(m=>m.id===id)).filter(Boolean).sort(byDateDesc)}
 const byDateDesc=(a,b)=>b.date.localeCompare(a.date);
 function meetingsOf(name){return data.meetings.filter(m=>m.person===name).sort(byDateDesc)}
 function allPeople(){
@@ -448,6 +465,7 @@ function adviceRow({m,a,reason},opts={}){
       <a href="#/case/${esc(m.id)}">${esc(m.title)}</a>
       ${kindTag(a.kind)}
       ${a.evidence?`<button class="link-btn" type="button" data-src-case="${esc(m.id)}" data-src-seg="${a.evidence.seg}">${ic('quote')}ציון מקור</button>`:''}
+      <button class="link-btn" type="button" data-ask-open="" data-scope-type="advice" data-scope-id="${esc(m.id+':'+a.id)}">${ic('spark')}שאל על העצה</button>
     </div>
   </div>`;
 }
@@ -616,11 +634,11 @@ function weatherCard(){
    לחוזה המתוכנן של POST /api/assistant/ask בשרת ה-NAS.
    ============================================================ */
 const INTENTS=[
-  {k:'briefing',label:'הכנה לפגישה',re:/(תכין|הכנה|להתכונן|לפני הפגישה|לפני שאני מדבר|מה חשוב שאזכור|תדריך)/},
+  {k:'briefing',label:'הכנה לפגישה',re:/(תכין|הכנה|להתכונן|לפני הפגישה|לפני שאני מדבר|עוד מעט מדבר|מה חשוב שאזכור|מה חשוב לדעת|מה באמת חשוב|תזכיר לי|תדריך)/},
   {k:'changedMind',label:'שינויים וסתירות בעצות',re:/(שיניתי את דעתי|שינית|סותר|סתירה|סתירות|משהו אחר|אמרתי אחרת)/},
   {k:'why',label:'הנימוק לעצה',re:/(למה|מדוע|מה הנימוק|מה הסיבה|על סמך מה)/},
   {k:'previous',label:'מה נאמר בפעם הקודמת',re:/(בפעם הקודמת|בפגישה הקודמת|בפגישה האחרונה|בפעם האחרונה|לאחרונה)/},
-  {k:'changed',label:'מה השתנה',re:/(מה השתנה|השתנה מאז|מאז הפגישה|התקדמות|מה קרה בעקבות|מה קרה מאז)/},
+  {k:'changed',label:'מה השתנה',re:/(מה השתנה|השתנה מאז|מאז הפגישה|התקדמות|מה קרה בעקבות|מה קרה מאז|מה קרה אחרי|התפתח|התפתחה|מה כבר ניסינו|תוצאות ידועות)/},
   {k:'open',label:'מה עדיין פתוח',re:/(פתוח|פתוחים|מעקב|מעקבים|לבדוק|לחזור|לא בוצע|היה אמור|משימות|התחייב)/},
   {k:'exceptions',label:'חריגים',re:/(חריג|חריגים|יוצא דופן|לא חל)/},
   {k:'principles',label:'עקרונות חוזרים',re:/(עקרונ|עיקרון|דפוס|דפוסים|מתודולוגיה|שיטה שלי)/},
@@ -631,8 +649,14 @@ const INTENTS=[
 ];
 const INTENT_WORDS=/(מה|אילו|איזה|אמרתי|המלצתי|ייעצתי|לו|לה|להם|בפעם|הקודמת|האחרונה|מצא|לי|מקרים|דומים|דומה|עם|על|של|בנושא|תכין|אותי|לפגישה|שאלות|אני|שואל|נתקלתי|כבר|עצות|עצה|בעיה|בעיות)/g;
 function detectIntent(q){const s=String(q||'');for(const i of INTENTS)if(i.re.test(s))return i;return{k:'search',label:'חיפוש חופשי'}}
+function adviceRef(id){
+  const [mid,aid]=String(id||'').split(':');const m=data.meetings.find(x=>x.id===mid);
+  const a=m?.analysis?.advice?.find(x=>x.id===aid);return a?{m,a}:null;
+}
 function scopeLabel(sc){
   if(sc.type==='person')return sc.id;
+  if(sc.type==='case'){const c=caseById(sc.id);return c?'התיק „'+c.title+'”':'תיק'}
+  if(sc.type==='advice'){const r=adviceRef(sc.id);return r?'העצה מ־'+formatDate(r.m.date)+' ('+r.m.person+')':'עצה'}
   if(sc.type==='recording'){const m=data.meetings.find(x=>x.id===sc.id);return m?'ההקלטה „'+m.title+'”':'הקלטה'}
   return'כל המאגר';
 }
@@ -640,6 +664,7 @@ function scopeFromRoute(){
   const r=parseRoute();
   if(r.key==='person'&&r.param)return{type:'person',id:r.param};
   if(r.key==='case'&&data.meetings.some(m=>m.id===r.param))return{type:'recording',id:r.param};
+  if(r.key==='file'&&caseById(r.param))return{type:'case',id:r.param};
   return{type:'global'};
 }
 // שם אדם שמופיע בשאלה מצמצם את ההיקף אליו (רק כשההיקף הוא כל המאגר)
@@ -651,17 +676,20 @@ function scopeForQuestion(q,sc){
 function meetingsIn(sc){
   if(sc.type==='person')return meetingsOf(sc.id);
   if(sc.type==='recording')return data.meetings.filter(m=>m.id===sc.id);
+  if(sc.type==='case'){const c=caseById(sc.id);return c?recordingsOfCase(c):[]}
+  if(sc.type==='advice'){const r=adviceRef(sc.id);return r?meetingsOf(r.m.person):[]}
   return[...data.meetings].sort(byDateDesc);
 }
 function evOf(m,it){
   const e=it.evidence||{};
-  return{mid:m.id,seg:e.seg,quote:e.quote,time:e.time||null,speaker:e.speaker||null,date:m.date,person:m.person,title:m.title,version:m.analysis?.version||null,kind:it.kind,confidence:it.confidence};
+  return{mid:m.id,itemId:it.id,seg:e.seg,quote:e.quote,time:e.time||null,speaker:e.speaker||null,date:m.date,person:m.person,title:m.title,version:m.analysis?.version||null,kind:it.kind,confidence:it.confidence};
 }
 function finding(m,it,label){return{label:label||formatDate(m.date)+' · '+m.title,text:it.text,kind:it.kind,confidence:it.confidence,ev:it.evidence?evOf(m,it):null}}
 function coverageOf(sc,ms,opts={}){
   const total=data.meetings.length,cur=ms.filter(m=>m.analysis?.version===ANALYSIS_VERSION).length;
   const meth=ms.filter(m=>(m.analysis?.methodology||[]).length).length;
-  let t=sc.type==='global'?`החיפוש כלל את כל ${ms.length} ההקלטות במאגר`:sc.type==='person'?`החיפוש כלל ${ms.length} הקלטות של ${sc.id} (מתוך ${total} במאגר)`:`החיפוש כלל הקלטה אחת (מתוך ${total} במאגר)`;
+  const n=ms.length===1?'הקלטה אחת':ms.length+' הקלטות';
+  let t=sc.type==='global'?`החיפוש כלל את כל ${ms.length} ההקלטות במאגר`:sc.type==='person'?`החיפוש כלל ${n} של ${sc.id} (מתוך ${total} במאגר)`:sc.type==='case'?`החיפוש כלל ${n} בתיק (מתוך ${total} במאגר)`:sc.type==='advice'?`החיפוש כלל את העצה ואת ${n} של אותו אדם (מתוך ${total} במאגר)`:`החיפוש כלל הקלטה אחת (מתוך ${total} במאגר)`;
   t+=cur===ms.length?`, כולן מנותחות בגרסה ${ANALYSIS_VERSION} של ${ENGINE_LABEL}.`:`. ${cur} מהן בגרסה ${ANALYSIS_VERSION}, והשאר בגרסה ישנה יותר.`;
   if(opts.method)t+=` שכבת המתודולוגיה: ${meth} הקלטות עובדו. הממצאים הם תצפיות מועמדות בלבד.`;
   return{inScope:ms.length,total,currentVersion:cur,methodology:meth,text:t};
@@ -679,11 +707,69 @@ function verifyEvidence(ans){
   ans.verified=true;
   return ans;
 }
+/* ---------- חבילת ראיות וחוזה סינתזה ----------
+   שכבה 1 (כאן): בונה חבילת ראיות לכל שאלה, בלי קשר לסוג השאלה.
+   שכבה 2 (שרת NAS, בעתיד): מקבלת את אותה חבילה, מוסיפה שליפה סמנטית,
+   ומבקשת ממודל שפה לנסח. המודל רשאי לצטט רק מזהים מהחבילה.
+   validateSynthesis אוכף את זה לפני שמשהו מוצג. */
+const ITEM_KEYS=['problem','observations','advice','reasoning','outcomes','results','followups','contradictions','methodology'];
+function evidenceId(m,it){return m.id+'#'+it.id}
+function scopeItems(ms){
+  const out=[];
+  for(const m of ms){const an=m.analysis||{};
+    for(const k of ITEM_KEYS){const arr=k==='problem'?(an.problem?[an.problem]:[]):(an[k]||[]);
+      for(const it of arr)out.push({id:evidenceId(m,it),type:it.type||k,subtype:it.subtype||null,text:it.text,kind:it.kind,confidence:it.confidence,m,it})}}
+  return out;
+}
+// שליפה כללית: עובדת לכל שאלה, גם כזו שאין לה כוונה מוגדרת
+function retrieveEvidence(q,sc,opts={}){
+  const ms=meetingsIn(sc),limit=opts.limit||24;
+  const pq=prepQuery(String(q||'').replace(INTENT_WORDS,' '));
+  const items=scopeItems(ms).map(x=>{
+    let score=0;for(const vars of pq.vars)score+=fieldScore(x.text,vars)*2+fieldScore(x.m.title+' '+(x.m.tags||[]).join(' '),vars);
+    return{...x,score};
+  });
+  const hits=items.filter(x=>x.score>0);
+  const picked=(hits.length?hits:(pq.tokens.length?[]:items)).sort((a,b)=>b.score-a.score||b.m.date.localeCompare(a.m.date)).slice(0,limit);
+  return{question:q,scope:sc,items:picked,considered:items.length,coverage:coverageOf(sc,ms)};
+}
+// הבקשה שתישלח לשרת. אין בה מפתחות, ורק ראיות מהיקף השאלה.
+function buildSynthesisRequest(question,scope,bundle,intentHint){
+  return{
+    contract:'nitzotza.assistant.v1',question,scope,intent_hint:intentHint||null,
+    evidence:bundle.items.map(x=>({id:x.id,recording_id:x.m.id,date:x.m.date,person:x.m.person,case_ids:casesOfRecording(x.m.id).map(c=>c.id),
+      type:x.type,subtype:x.subtype,kind:x.kind,confidence:x.confidence??null,text:x.text,quote:x.it.evidence?.quote??null,
+      time:x.it.evidence?.time??null,segment:x.it.evidence?.seg??null,extraction_version:x.m.analysis?.version??null})),
+    coverage:bundle.coverage,
+    rules:{source_of_truth:'evidence_only',cite_every_claim:true,verbatim_quotes_only:true,unknown_when_unsupported:true,no_new_recommendations_unless_asked:true}
+  };
+}
+// אימות תשובה של מודל: כל משפט חייב לצטט מזהה ראיה מהחבילה, וכל ציטוט חייב להופיע מילה במילה במקור
+function validateSynthesis(resp,req){
+  const byId=new Map(req.evidence.map(e=>[e.id,e]));
+  const out={answer:[],quotes:[],unknowns:[...(resp?.unknowns||[])],rejected:[]};
+  for(const s of resp?.answer||[]){
+    const cites=(s.cites||[]).filter(id=>byId.has(id));
+    if(!cites.length){out.rejected.push({text:s.text,reason:'no_valid_citation'});continue}
+    out.answer.push({text:s.text,cites});
+  }
+  for(const q of resp?.quotes||[]){
+    const e=byId.get(q.evidence_id);const m=e&&data.meetings.find(x=>x.id===e.recording_id);
+    const seg=m?.analysis?.segments?.[e.segment];
+    if(!seg||!q.text||!seg.text.includes(q.text)){out.rejected.push({text:q.text,reason:'quote_not_verbatim'});continue}
+    out.quotes.push(q);
+  }
+  if(out.rejected.length)out.unknowns.push(out.rejected.length+' טענות או ציטוטים של המודל לא נתמכו בראיות והוסרו.');
+  return out;
+}
+// נקודת החיבור לשכבה 2. באתר הציבורי אין שרת, ולכן היא כבויה תמיד.
+const SYNTHESIS={available:false,endpoint:null,reason:'ניסוח חופשי של תשובה יפעל רק בשרת ה־NAS. כאן מוצגות הראיות עצמן, מסודרות.'};
+
 function askSecondBrain(question,scope){
   const q=String(question||'').trim();
   const intent=detectIntent(q);
   let sc=scopeForQuestion(q,scope||{type:'global'});
-  const ans={question:q,intent:intent.k,intentLabel:intent.label,scope:sc,scopeLabel:scopeLabel(sc),answer:[],findings:[],related:[],unknowns:[],coverage:null,engine:{tier:1,name:ENGINE_LABEL,version:ANALYSIS_VERSION}};
+  const ans={question:q,intent:intent.k,intentLabel:intent.label,scope:sc,scopeLabel:scopeLabel(sc),answer:[],findings:[],related:[],unknowns:[],coverage:null,engine:{tier:1,name:ENGINE_LABEL,version:ANALYSIS_VERSION},synthesis:{mode:'deterministic',available:SYNTHESIS.available}};
   if(!q){ans.unknowns.push('לא נשאלה שאלה.');return ans}
   const personal=['briefing','previous','changed','open','why'].includes(intent.k);
   if(personal&&sc.type==='global'&&/(לו|לה|אצלו|אצלה|איתו|איתה|ממנו|ממנה|אותו|אותה)(\s|\?|$)/.test(q)){
@@ -711,7 +797,8 @@ function askSecondBrain(question,scope){
     },
     open(){
       const names=sc.type==='global'?null:new Set(ms.map(m=>m.person));
-      const fs=data.followups.filter(f=>!f.done&&(!names||names.has(f.person))&&(sc.type!=='recording'||f.meetingId===sc.id)).sort((a,b)=>(a.due||'9').localeCompare(b.due||'9'));
+      const ids=new Set(ms.map(m=>m.id));
+      const fs=data.followups.filter(f=>!f.done&&(!names||names.has(f.person))&&((sc.type!=='recording'&&sc.type!=='case')||ids.has(f.meetingId))).sort((a,b)=>(a.due||'9').localeCompare(b.due||'9'));
       ans.answer.push(fs.length?`${fs.length} מעקבים פתוחים${fs.some(f=>f.due&&f.due<todayISO())?', חלקם באיחור':''}.`:'אין מעקבים פתוחים בהיקף הזה.');
       for(const f of fs){
         const m=f.meetingId&&data.meetings.find(x=>x.id===f.meetingId);
@@ -732,17 +819,48 @@ function askSecondBrain(question,scope){
       for(const c of la.contradictions||[])ans.findings.push(finding(late,c,'חריג שנאמר'));
     },
     briefing(){
-      const p=sc.type==='person'?allPeople().find(x=>x.name===sc.id):null;
+      // הכנה לפגישה: אחזור זיכרון מקצועי בלבד, מחולק לפי נושאים. לא מוסיפה עצות.
+      const sec=(name,f)=>{f.section=name;ans.findings.push(f)};
+      const person=sc.type==='person'?sc.id:(ms[0]?.person||null);
+      const p=person?allPeople().find(x=>x.name===person):null;
       ans.answer.push(p?`${p.name}: ${p.count} פגישות, מ־${formatDate(p.first)} עד ${formatDate(p.last)}${p.topic?'. נושא מרכזי: '+p.topic:''}.`:`סיכום לפי ${ans.scopeLabel}.`);
+      const cs=sc.type==='case'?[caseById(sc.id)].filter(Boolean):person?casesOfPerson(person):[];
+      for(const c of cs)sec('תיקים',{label:(c.status==='closed'?'סגור':'פתוח')+' · '+recordingsOfCase(c).length+' הקלטות',text:c.title,kind:'manual',ev:null,route:'file/'+c.id});
       const m=ms[0],an=m.analysis||{};
-      if(an.problem)ans.findings.push(finding(m,an.problem,'הבעיה בפגישה האחרונה'));
-      for(const x of chrono){const xa=x.analysis||{};for(const a of xa.advice||[]){ans.findings.push(finding(x,a,'עצה · '+formatDate(x.date)));const r=reasonFor(xa,a);if(r)ans.findings.push(finding(x,r,'נימוק'))}}
-      for(const x of chrono)for(const r of x.analysis?.results||[])ans.findings.push(finding(x,r,'תוצאה שדווחה · '+formatDate(x.date)));
-      for(const x of chrono)for(const c of x.analysis?.contradictions||[])ans.findings.push(finding(x,c,'חריג'));
-      const fs=data.followups.filter(f=>!f.done&&ms.some(y=>y.person===f.person));
-      for(const f of fs)ans.findings.push({label:'פתוח · '+dueLabel(f.due).t,text:f.title,kind:'manual',confidence:null,ev:null});
-      if(fs.length)ans.answer.push('שאלות להמשך, לפי המעקבים הפתוחים: '+fs.map(f=>f.title).join(' · '));
+      sec('הפגישה האחרונה',{label:formatFull(m.date),text:m.title,kind:'manual',ev:null,route:'case/'+m.id});
+      if(an.problem)sec('הפגישה האחרונה',finding(m,an.problem,'הבעיה'));
+      for(const x of chrono){const xa=x.analysis||{};for(const o of xa.observations||[])sec('תצפיות',finding(x,o,formatDate(x.date)))}
+      for(const x of chrono){const xa=x.analysis||{};for(const a of xa.advice||[]){const k=a.type==='decision'?'החלטות':'עצות ונימוקים';sec(k,finding(x,a,(a.type==='decision'?'החלטה':'עצה')+' · '+formatDate(x.date)));const r=reasonFor(xa,a);if(r)sec(k,finding(x,r,'נימוק'))}}
+      for(const x of chrono)for(const r of x.analysis?.results||[])sec('תוצאות ידועות',finding(x,r,formatDate(x.date)));
+      const names=new Set(ms.map(y=>y.person));
+      for(const ch of adviceChanges().filter(c=>names.has(c.person))){sec('שינויים לאורך זמן',finding(ch.earlier,ch.a1,'קודם · '+formatDate(ch.earlier.date)));sec('שינויים לאורך זמן',finding(ch.later,ch.a2,'אחר כך · '+formatDate(ch.later.date)))}
+      for(const x of chrono)for(const c of x.analysis?.contradictions||[])sec('חריגים',finding(x,c,formatDate(x.date)));
+      const ids=new Set(ms.map(y=>y.id));
+      const fs=data.followups.filter(f=>!f.done&&(sc.type==='case'?ids.has(f.meetingId):names.has(f.person)));
+      for(const f of fs){const fm=f.meetingId&&data.meetings.find(x=>x.id===f.meetingId);const src=fm&&(fm.analysis?.followups||[]).find(it=>it.text===f.title);
+        sec('פתוח ומשימות',src?finding(fm,src,dueLabel(f.due).t):{label:dueLabel(f.due).t,text:f.title,kind:'manual',confidence:null,ev:null})}
+      const related=new Set(cs.flatMap(c=>c.people||[]));if(person)related.delete(person);
+      for(const r of related)sec('אנשים קשורים',{label:'שותף לתיק',text:r,kind:'manual',ev:null,route:'person/'+encodeURIComponent(r)});
+      const lastAdvice=chrono.flatMap(x=>(x.analysis?.advice||[]).map(a=>({x,a}))).pop();
+      const reportedAfter=lastAdvice&&chrono.some(x=>x.date>lastAdvice.x.date&&(x.analysis?.results||[]).length);
+      if(lastAdvice&&!reportedAfter)ans.unknowns.push(`עוד לא תועדה תוצאה לעצה האחרונה (${formatDate(lastAdvice.x.date)}).`);
+      if(fs.length)ans.answer.push('שאלות להמשך, לפי מה שנשאר פתוח: '+fs.map(f=>f.title).join(' · '));
       ans.answer.push('ההכנה מציגה רק מה שתועד. היא לא מציעה עצות חדשות.');
+    },
+    adviceDossier(){
+      // היקף של עצה אחת: העצה, הנימוק, הראיה, מה קרה אחריה, ואיך העצה התפתחה אצל אותו אדם
+      const r=adviceRef(sc.id);if(!r){ans.unknowns.push('העצה לא נמצאה.');return}
+      const {m,a}=r,an=m.analysis||{},why=reasonFor(an,a);
+      ans.answer.push(`העצה ניתנה ל${m.person} ב${formatFull(m.date)}, בהקלטה „${m.title}”.`);
+      ans.findings.push({...finding(m,a,'העצה'),section:'העצה'});
+      if(why)ans.findings.push({...finding(m,why,'הנימוק'),section:'העצה'});else ans.unknowns.push('לא נמצא נימוק מפורש לעצה הזו.');
+      for(const o of an.outcomes||[])ans.findings.push({...finding(m,o,'התוצאה המצופה'),section:'העצה'});
+      const later=meetingsOf(m.person).filter(x=>x.date>m.date).sort((x,y)=>x.date.localeCompare(y.date));
+      for(const x of later){for(const res of x.analysis?.results||[])ans.findings.push({...finding(x,res,'דווח ב־'+formatDate(x.date)),section:'מה קרה אחר כך'});
+        for(const b of x.analysis?.advice||[])ans.findings.push({...finding(x,b,'עצה מאוחרת · '+formatDate(x.date)),section:'איך העצה התפתחה'})}
+      if(!later.length)ans.unknowns.push('אין עדיין פגישה מאוחרת יותר עם '+m.person+', ולכן לא ידוע מה קרה אחרי העצה.');
+      for(const c of casesOfRecording(m.id))ans.related.push({label:'תיק: '+c.title,meta:'',route:'file/'+c.id});
+      ans.related.push({label:'ההקלטה',meta:formatDate(m.date),route:'case/'+m.id});
     },
     advice(){
       for(const m of chrono){const an=m.analysis||{};for(const a of an.advice||[]){ans.findings.push(finding(m,a,m.person+' · '+formatDate(m.date)));const r=reasonFor(an,a);if(r)ans.findings.push(finding(m,r,'נימוק'))}}
@@ -799,15 +917,20 @@ function askSecondBrain(question,scope){
       if(!ans.findings.length)ans.unknowns.push('לא זוהה ניסוח מפורש של בעיה.');
     },
     search(){
-      const res=searchAll(q);
-      const inScope=new Set(ms.map(m=>m.id));
-      for(const{m,a,reason}of allAdvice().filter(x=>inScope.has(x.m.id)&&res.groups.advice.some(g=>g.id===x.m.id+':'+x.a.id))){ans.findings.push(finding(m,a,m.person+' · '+formatDate(m.date)));if(reason)ans.findings.push(finding(m,reason,'נימוק'))}
-      for(const it of res.groups.meeting.filter(g=>inScope.has(g.id)))ans.related.push({label:it.title,meta:it.meta,route:it.route});
-      ans.answer.push(ans.findings.length||ans.related.length?'לא זיהיתי סוג שאלה מוכר, ולכן אלה התאמות החיפוש בהיקף.':'לא נמצאה ראיה שעונה על השאלה.');
+      // שאלה חופשית: לא מוגבלת לכוונות. שולפים את הראיות הרלוונטיות ביותר בהיקף, מכל הסוגים.
+      const b=retrieveEvidence(q,sc);
+      const TYPE={problem:'בעיה',observation:'תצפית',advice:'עצה',decision:'החלטה',reasoning:'נימוק',outcome:'תוצאה מצופה',result:'מה קרה',followup:'מעקב',contradiction:'חריג',methodology:'מהלך ייעוץ'};
+      for(const x of [...b.items].sort((p,r)=>p.m.date.localeCompare(r.m.date)))ans.findings.push(finding(x.m,x.it,(TYPE[x.type]||x.type)+' · '+x.m.person+' · '+formatDate(x.m.date)));
+      ans.answer.push(b.items.length?`לא זיהיתי סוג שאלה מוגדר, ולכן אלה ${b.items.length} הקטעים הרלוונטיים ביותר בהיקף, לפי סדר הזמן.`:'לא נמצאה ראיה שעונה על השאלה.');
+      if(b.items.length&&!SYNTHESIS.available)ans.unknowns.push(SYNTHESIS.reason);
     }
   };
-  (H[intent.k]||H.search)();
+  if(sc.type==='advice'&&!['similar','changedMind'].includes(intent.k)){ans.intentLabel='תיק עצה: העצה, הנימוק ומה קרה אחריה';H.adviceDossier()}
+  else (H[intent.k]||H.search)();
+  // מזהי הראיות נשמרים בתשובה, כדי ששכבה 2 תוכל לנסח מהן בלי לשלוף מחדש
+  ans.evidenceIds=[...new Set(ans.findings.filter(f=>f.ev).map(f=>f.ev.mid+'#'+f.ev.itemId))];
   if(sc.type==='person')ans.related.push({label:'פרופיל '+sc.id,meta:'',route:'person/'+encodeURIComponent(sc.id)});
+  if(sc.type==='case')ans.related.push({label:'עמוד התיק',meta:'',route:'file/'+sc.id});
   if(sc.type!=='global')ans.related.push({label:'להרחיב לכל המאגר',meta:'',scope:{type:'global'}});
   if(!ans.findings.length&&!ans.unknowns.length&&!ans.answer.length)ans.unknowns.push('לא נמצאה ראיה.');
   return verifyEvidence(ans);
@@ -815,6 +938,8 @@ function askSecondBrain(question,scope){
 const ASK_SUGGEST={
   person:['מה אמרתי לו בפעם הקודמת?','מה עדיין פתוח?','אילו עצות כבר נתתי?','מה השתנה?','למה המלצתי את זה?','תכין אותי לפגישה הבאה'],
   recording:['מה היו הבעיות?','מה המלצתי?','למה המלצתי את זה?','מה דורש מעקב?','אילו חריגים נאמרו?','מצא מקרים דומים'],
+  case:['איך המקרה התפתח?','מה כבר ניסינו?','אילו עצות ניתנו?','מה עדיין פתוח?','תכין אותי לפגישה הבאה','איפה שיניתי את דעתי?'],
+  advice:['למה המלצתי את זה?','מה קרה אחרי העצה הזו?','איך העצה התפתחה?','איפה שיניתי את דעתי?','מצא מקרים דומים'],
   global:['מצא מקרים דומים לריבים בזוגיות','אילו עקרונות חוזרים אצלי?','אילו חריגים קיימים?','איפה שיניתי את דעתי?','אילו שאלות אני נוהג לשאול?','מה עדיין פתוח?']
 };
 /* ---------- ממשק העוזר ---------- */
@@ -831,7 +956,7 @@ function scopeChip(){
   return`<div class="ask-scope"><span>היקף:</span><strong>${esc(scopeLabel(askScope))}</strong>${askScope.type!=='global'?`<button type="button" class="link-btn" data-ask-scope="global">להרחיב לכל המאגר</button>`:''}</div>`;
 }
 function renderAskIdle(){
-  const kind=askScope.type==='person'?'person':askScope.type==='recording'?'recording':'global';
+  const kind=ASK_SUGGEST[askScope.type]?askScope.type:'global';
   el('ask-body').innerHTML=scopeChip()+`<h3 class="pal-h">שאלות לדוגמה</h3><div class="example-row">${ASK_SUGGEST[kind].map(s=>`<button class="example" type="button" data-ask-q="${esc(s)}">${esc(s)}</button>`).join('')}</div>
     <p class="pal-tip">התשובות נבנות רק ממה שתועד בהקלטות, עם הפניה למשפט המקור. מה שלא נמצא מסומן כלא ידוע.</p>`;
   bindAsk();
@@ -850,10 +975,16 @@ function runAsk(){
         ${x.route?`<a class="link-btn" href="#/${x.route}" data-ask-close>פתיחה ${ic('fwd')}</a>`:''}
       </div>${x.note?`<p class="ask-note">${esc(x.note)}</p>`:''}
     </li>`).join('');
+  // ממצאים עם section מוצגים בקבוצות (הכנה לפגישה, תיק עצה); השאר ברשימה אחת
+  let findingsHtml='';
+  if(ans.findings.some(x=>x.section)){const order=[];const g=new Map();ans.findings.forEach((x,i)=>{const k=x.section||'עוד';if(!g.has(k)){g.set(k,[]);order.push(k)}g.get(k).push(i)});
+    const items=f.split('</li>').filter(x=>x.trim()).map(x=>x+'</li>');
+    findingsHtml=order.map(k=>`<h3 class="pal-h">${esc(k)}</h3><ol class="ask-findings">${g.get(k).map(i=>items[i]).join('')}</ol>`).join('');}
+  else if(ans.findings.length)findingsHtml=`<h3 class="pal-h">ממצאים וראיות</h3><ol class="ask-findings">${f}</ol>`;
   el('ask-body').innerHTML=`${scopeChip()}
     <p class="ask-intent">הבנתי: ${esc(ans.intentLabel)}</p>
     <div class="ask-answer">${ans.answer.map(p=>`<p>${esc(p)}</p>`).join('')}</div>
-    ${ans.findings.length?`<h3 class="pal-h">ממצאים וראיות</h3><ol class="ask-findings">${f}</ol>`:''}
+    ${findingsHtml}
     ${ans.unknowns.length?`<h3 class="pal-h">לא ידוע</h3><ul class="ask-unknowns">${ans.unknowns.map(u=>`<li>${esc(u)}</li>`).join('')}</ul>`:''}
     ${ans.related.length?`<h3 class="pal-h">${ans.needsScope?'לבחור אדם':'קשור'}</h3><div class="example-row">${ans.related.map(r=>r.scope?`<button class="example" type="button" data-ask-scope="${esc(r.scope.type)}" data-ask-scope-id="${esc(r.scope.id||'')}">${esc(r.label)}</button>`:`<a class="example" href="#/${r.route}" data-ask-close>${esc(r.label)}${r.meta?' · '+esc(r.meta):''}</a>`).join('')}</div>`:''}
     ${ans.coverage?`<p class="ask-coverage">${esc(ans.coverage.text)}</p>`:''}`;
@@ -873,7 +1004,7 @@ function bindAskDialog(){
   el('ask-btn').onclick=()=>openAsk('',scopeFromRoute());
 }
 function askCard(scope){
-  const kind=scope.type==='person'?'person':'recording';
+  const kind=ASK_SUGGEST[scope.type]?scope.type:'recording';
   return`<section class="ctx-card ask-card"><h2>שאל את המוח השני</h2>
     <div class="ask-card-list">${ASK_SUGGEST[kind].slice(0,4).map(s=>`<button type="button" class="ask-card-q" data-ask-open="${esc(s)}" data-scope-type="${scope.type}" data-scope-id="${esc(scope.id)}">${ic('spark')}<span>${esc(s)}</span></button>`).join('')}</div>
   </section>`;
@@ -1004,6 +1135,35 @@ function plaudPanel(m){
   <div class="panel panel-pad">${m.plaud?`<p class="plaud-text">${esc(m.plaud)}</p>`:'<p class="src-empty">לא נשמר ניתוח PLAUD להקלטה זו</p>'}</div>`;
 }
 
+function fileView(id){
+  const c=caseById(id);
+  if(!c)return emptyState('התיק לא נמצא','','חזרה לאנשים','people');
+  const ms=recordingsOfCase(c),chrono=[...ms].reverse();
+  const ids=new Set(ms.map(m=>m.id));
+  const adv=allAdvice().filter(x=>ids.has(x.m.id));
+  const fs=data.followups.filter(f=>ids.has(f.meetingId)).sort((a,b)=>Number(a.done)-Number(b.done)||(a.due||'9').localeCompare(b.due||'9'));
+  const results=chrono.flatMap(m=>(m.analysis?.results||[]).map(r=>({m,r})));
+  return`<div class="detail">
+    <a class="crumb" href="#people">${ic('back')} אנשים</a>
+    <header class="d-head">
+      <h2 class="d-title">${esc(c.title)}</h2>
+      <div class="d-meta">${pill(c.status==='closed'?'תיק סגור':'תיק פתוח',c.status==='closed'?'':'accent')}
+        ${(c.people||[]).map(n=>`<a class="meta-link" href="#/person/${encodeURIComponent(n)}">${ic('users')} ${esc(n)}</a>`).join('<i class="dot-sep"></i>')}
+        <i class="dot-sep"></i><span>${ms.length} הקלטות</span>${(c.tags||[]).map(t=>pill(t)).join('')}</div>
+      <p class="d-summary">תיק הוא נושא מתמשך. הוא יכול לכלול כמה אנשים וכמה הקלטות, והקלטה יכולה להשתייך לכמה תיקים.</p>
+    </header>
+    <div class="stack">
+      <section>${sectionHead('ציר הזמן של התיק')}<div class="timeline">${chrono.map(m=>`<a class="tl-item" href="#/case/${esc(m.id)}"><span class="tl-date">${formatFull(m.date)} · ${esc(m.person)}</span><strong>${esc(m.title)}</strong>${m.summary?`<p>${esc(m.summary)}</p>`:''}</a>`).join('')||'<p class="muted-note">אין הקלטות בתיק.</p>'}</div></section>
+      <section>${sectionHead('עצות ונימוקים')}<div class="panel">${adv.length?adv.map(x=>adviceRow(x)).join(''):emptyState('אין עצות בתיק','')}</div></section>
+      <section>${sectionHead('תוצאות ידועות')}<div class="panel">${results.length?results.map(({m,r})=>`<div class="adv-row"><p class="adv-text">${esc(r.text)}</p><div class="adv-foot"><span>${formatDate(m.date)}</span><i class="dot-sep"></i><a href="#/case/${esc(m.id)}">${esc(m.title)}</a><button class="link-btn" type="button" data-src-case="${esc(m.id)}" data-src-seg="${r.evidence.seg}">${ic('quote')}ציון מקור</button></div></div>`).join(''):emptyState('עוד לא דווחו תוצאות','')}</div></section>
+      <section>${sectionHead('מעקבים')}<div class="panel">${fs.length?fs.map(f=>followRow(f)).join(''):emptyState('אין מעקבים בתיק','')}</div></section>
+    </div>
+  </div>`;
+}
+function casesCard(list,title){
+  if(!list.length)return'';
+  return`<section class="ctx-card"><h2>${title}</h2><ul class="ctx-list">${list.map(c=>`<li><a href="#/file/${esc(c.id)}">${esc(c.title)}</a><span class="ctx-sub">${c.status==='closed'?'סגור':'פתוח'} · ${recordingsOfCase(c).length} הקלטות · ${(c.people||[]).map(esc).join(', ')}</span></li>`).join('')}</ul></section>`;
+}
 function peopleView(){
   const f=navState.filters.people||'';
   return`<div class="page-tools"><input id="filter-people" type="search" value="${esc(f)}" placeholder="חיפוש אדם" aria-label="חיפוש אדם"></div>
@@ -1182,6 +1342,7 @@ function contextFor(r){
       const openF=data.followups.filter(f=>f.person===m.person&&!f.done);
       const rel=relatedPrinciples(m);
       parts.push(askCard({type:'recording',id:m.id}));
+      parts.push(casesCard(casesOfRecording(m.id),'תיקים שההקלטה שייכת אליהם'));
       parts.push(`<section class="ctx-card"><h2>פרטי ההקלטה</h2><dl class="ctx-dl">
         <dt>אדם</dt><dd><a href="#/person/${encodeURIComponent(m.person)}">${esc(m.person)}</a></dd>
         <dt>תאריך</dt><dd>${formatDate(m.date)}</dd>
@@ -1207,11 +1368,16 @@ function contextFor(r){
     const tags=new Map();for(const m of ms)for(const t of m.tags||[])tags.set(t,(tags.get(t)||0)+1);
     const relMap=new Map();for(const m of ms)for(const{principle:p}of relatedPrinciples(m,2))relMap.set(p.id,p);
     if(ms.length)parts.push(askCard({type:'person',id:name}));
+    parts.push(casesCard(casesOfPerson(name),'תיקים'));
     parts.push(`<section class="ctx-card"><h2>מעקבים פתוחים</h2>${openF.length?`<ul class="ctx-list">${openF.map(f=>`<li>${esc(f.title)}<span class="ctx-sub ${dueLabel(f.due).cls}">${dueLabel(f.due).t}</span></li>`).join('')}</ul>`:'<p class="ctx-empty">אין.</p>'}</section>`);
     if(tags.size)parts.push(`<section class="ctx-card"><h2>נושאים חוזרים</h2><div class="example-row" style="margin:0">${[...tags.entries()].sort((a,b)=>b[1]-a[1]).map(([t,n])=>pill(t+(n>1?' · '+n:''),'accent')).join('')}</div></section>`);
     if(relMap.size)parts.push(`<section class="ctx-card"><h2>עקרונות שעשויים להתאים</h2><ul class="ctx-list">${[...relMap.values()].map(p=>`<li><a href="#/principle/${esc(p.id)}">${esc(p.title)}</a></li>`).join('')}</ul></section>`);
     parts.push(zmanimCard());
     return parts.join('');
+  }
+  if(r.key==='file'){
+    const c=caseById(r.param);
+    if(c){parts.push(askCard({type:'case',id:c.id}));parts.push(zmanimCard());return parts.join('')}
   }
   if(r.key==='recordings'&&navState.lastCase){
     const m=data.meetings.find(x=>x.id===navState.lastCase);
@@ -1247,6 +1413,7 @@ function render(){
   let title,eyebrow;
   if(r.key==='case'){const m=data.meetings.find(x=>x.id===r.param);title=m?m.title:'הקלטה';eyebrow=m?m.person+' · '+formatDate(m.date):''}
   else if(r.key==='person'){title=r.param||'אדם';eyebrow='הזיכרון לפני הפגישה'}
+  else if(r.key==='file'){const c=caseById(r.param);title=c?c.title:'תיק';eyebrow='תיק'+(c?' · '+(c.people||[]).join(', '):'')}
   else if(r.key==='principle'){const p=data.principles.find(x=>x.id===r.param);title=p?p.title:'עיקרון';eyebrow='עיקרון'}
   else{const t=ROUTE_TITLES[r.key]();title=t.t;eyebrow=t.e}
   el('page-title').textContent=title;
@@ -1255,7 +1422,7 @@ function render(){
   const views={
     home:homeView,recordings:recordingsView,people:peopleView,advice:adviceView,principles:principlesView,contradictions:contradictionsView,
     search:()=>searchView(lastSearch),followups:followupsView,
-    case:()=>caseView(r.param),person:()=>personView(r.param),principle:()=>principleView(r.param)
+    case:()=>caseView(r.param),file:()=>fileView(r.param),person:()=>personView(r.param),principle:()=>principleView(r.param)
   };
   el('view').innerHTML=views[r.key]();
   el('context').innerHTML=contextFor(r);
@@ -1321,7 +1488,7 @@ function bind(){
   qsa('[data-src-case]').forEach(b=>b.onclick=()=>openSource(b.dataset.srcCase,+b.dataset.srcSeg));
   qsa('[data-case-tab]').forEach(b=>b.onclick=()=>{navState.caseTab[parseRoute().param]=b.dataset.caseTab;persistNav();renderViewOnly()});
   qsa('[data-export]').forEach(b=>b.onclick=exportBackup);
-  qsa('[data-ask-open]').forEach(b=>b.onclick=()=>openAsk(b.dataset.askOpen,{type:b.dataset.scopeType,id:b.dataset.scopeId}));
+  qsa('[data-ask-open]').forEach(b=>b.onclick=()=>openAsk(b.dataset.askOpen||'',{type:b.dataset.scopeType,id:b.dataset.scopeId}));
   qsa('[data-delete-case]').forEach(b=>b.onclick=()=>deleteMeeting(b.dataset.deleteCase));
   const hero=el('hero-search');
   if(hero)hero.onsubmit=e=>{e.preventDefault();lastSearch=String(new FormData(e.target).get('q')||'');saveRecent(lastSearch);navigate('search')};
@@ -1477,6 +1644,7 @@ function deleteMeeting(id){
   if(!confirm(`למחוק את ההקלטה „${m.title}”? התמלול והידע שחולץ ממנה יימחקו מהמכשיר.`))return;
   data.meetings=data.meetings.filter(x=>x.id!==id);
   data.followups=data.followups.filter(f=>f.meetingId!==id);
+  for(const c of allCases())c.recordingIds=(c.recordingIds||[]).filter(x=>x!==id);
   if(navState.lastCase===id){navState.lastCase=null;persistNav()}
   save();toast('ההקלטה נמחקה');navigate('recordings');
 }
@@ -1721,7 +1889,7 @@ function bindModelContext(){
   register({
     name:'ask_second_brain',title:'שאל את המוח השני',
     description:'שאלה בעברית על היסטוריית הייעוץ. מחזיר תשובה שבנויה רק מראיות מתועדות, עם הפניה למשפט המקור וכיסוי. קריאה בלבד.',
-    inputSchema:{type:'object',properties:{question:{type:'string',minLength:1},scope:{type:'object',properties:{type:{type:'string',enum:['global','person','recording']},id:{type:'string'}},required:['type'],additionalProperties:false}},required:['question'],additionalProperties:false},
+    inputSchema:{type:'object',properties:{question:{type:'string',minLength:1},scope:{type:'object',properties:{type:{type:'string',enum:['global','person','recording','case','advice']},id:{type:'string'}},required:['type'],additionalProperties:false}},required:['question'],additionalProperties:false},
     annotations:{readOnlyHint:true,untrustedContentHint:true},
     execute({question,scope}){
       if(typeof question!=='string'||!question.trim())throw new Error('נדרשת שאלה');
@@ -1773,4 +1941,4 @@ if('serviceWorker'in navigator){
   window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
 /* debug/test hook */
-window.__consulting={askSecondBrain,detectIntent,scopeFromRoute,SEED,load,save,analyzeTranscript,splitSegments,searchAll,tokenize,variants,relatedPrinciples,linkedCases,allPeople,allAdvice,adviceChanges,zmanimFor,hebrewDate,gematria,importMeeting,validBackup,get data(){return data},navigate,esc};
+window.__consulting={retrieveEvidence,buildSynthesisRequest,validateSynthesis,allCases,casesOfPerson,casesOfRecording,recordingsOfCase,SYNTHESIS,askSecondBrain,detectIntent,scopeFromRoute,SEED,load,save,analyzeTranscript,splitSegments,searchAll,tokenize,variants,relatedPrinciples,linkedCases,allPeople,allAdvice,adviceChanges,zmanimFor,hebrewDate,gematria,importMeeting,validBackup,get data(){return data},navigate,esc};

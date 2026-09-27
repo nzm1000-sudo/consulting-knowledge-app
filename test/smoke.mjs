@@ -176,6 +176,9 @@ const known=new Set();
 for(const m of app.data.meetings){const an=m.analysis;for(const k of ['observations','reasoning','advice','outcomes','results','followups','contradictions'])for(const it of an[k])known.add(it.text);if(an.problem)known.add(an.problem.text);an.segments.forEach(x=>known.add(x.text))}
 for(const f of app.data.followups)known.add(f.title);
 for(const p of app.data.principles)known.add(p.title);
+for(const c of app.data.cases||[])known.add(c.title);
+for(const m of app.data.meetings)known.add(m.title);
+for(const p of app.allPeople())known.add(p.name);
 const noInvention=a=>a.findings.every(f=>known.has(f.text)||(f.route&&f.route.startsWith('case/')));
 // intents
 assert.equal(app.detectIntent('מה אמרתי לו בפעם הקודמת?').k,'previous');
@@ -236,5 +239,48 @@ const askTool=documentStub.modelContext.__tools.find(t=>t.name==='ask_second_bra
 const snapshot=JSON.stringify(app.data);windowStub.location.hash='#advice';
 const tr=askTool.execute({question:'מה עדיין פתוח?'});
 assert(tr.findings.length>0&&windowStub.location.hash==='#advice'&&JSON.stringify(app.data)===snapshot,'ask tool is read-only');
+
+// 11. Architecture corrections: case entity, free questions, synthesis seam
+// case ≠ recording ≠ person, many-to-many
+assert(Array.isArray(app.data.cases)&&app.data.cases.length===3,'cases are their own entity');
+assert.deepEqual(app.casesOfPerson('דניאל').map(c=>c.id),['c1']);
+assert.deepEqual(app.recordingsOfCase(app.data.cases[0]).map(m=>m.id),['m4','m2'],'case spans recordings');
+app.data.cases.push({id:'cx',title:'בדיקה: תיק משפחתי משותף',status:'open',people:['דניאל','נועה'],recordingIds:['m2','m3']});
+assert.equal(app.casesOfRecording('m2').length,2,'one recording in two cases');
+assert(app.casesOfPerson('נועה').some(c=>c.id==='cx')&&app.casesOfPerson('דניאל').some(c=>c.id==='cx'),'one case, several people');
+a=ask('תכין אותי לפגישה',{type:'case',id:'cx'});
+assert(a.findings.some(f=>f.section==='אנשים קשורים'),'case briefing lists the other people');
+app.data.cases.pop();
+// case scope
+a=ask('איך המקרה התפתח?',{type:'case',id:'c1'});
+assert.equal(a.scope.type,'case');assert(a.coverage.text.includes('2 הקלטות בתיק'));
+assert(a.findings.some(f=>f.label==='מה דווח מאז'),'case evolution uses later results');
+// advice scope (dossier)
+a=ask('מה קרה אחרי העצה הזו?',{type:'advice',id:'m2:advice-1'});
+assert(a.findings.some(f=>f.section==='מה קרה אחר כך'&&f.text.includes('עבד בשתי')),'advice → later outcome');
+assert(a.findings.some(f=>f.section==='איך העצה התפתחה'),'advice → later advice');
+assert(a.unknowns.some(u=>u.includes('לא נמצא נימוק')),'missing reason stays unknown');
+// sectioned briefing
+a=ask('אני עוד מעט מדבר עם דניאל, תזכיר לי מה באמת חשוב לדעת עליו ומה נשאר פתוח',{type:'global'});
+assert.equal(a.intent,'briefing');assert.equal(a.scope.id,'דניאל');
+for(const s of ['תיקים','עצות ונימוקים','תוצאות ידועות','שינויים לאורך זמן','פתוח ומשימות'])assert(a.findings.some(f=>f.section===s),'briefing section '+s);
+assert(noInvention(a)&&allVerbatim(a));
+// free question: not limited to intents, retrieval still works
+a=ask('באילו מקרים הוזכרה נטישה?',{type:'global'});
+assert.equal(a.intent,'search');
+assert(a.findings.some(f=>f.text.includes('נטישה')),'free question retrieves by content');
+assert(a.unknowns.some(u=>u.includes('NAS')),'states that free synthesis runs on the server');
+assert(allVerbatim(a)&&noInvention(a));
+// synthesis seam: request carries only scoped evidence; validator rejects inventions
+const bundle=app.retrieveEvidence('עצירה',{type:'person',id:'דניאל'});
+const req=app.buildSynthesisRequest('מה אמרתי על עצירה?',{type:'person',id:'דניאל'},bundle,'advice');
+assert(req.evidence.length>0&&req.evidence.every(e=>e.person==='דניאל'),'request only holds scoped evidence');
+assert(!JSON.stringify(req).match(/api[_-]?key|sk-/i),'no secrets in request');
+const good=req.evidence.find(e=>e.quote);
+const v=app.validateSynthesis({answer:[{text:'המלצת לעצור.',cites:[good.id]},{text:'המלצת גם לעבור דירה.',cites:['m9#x']},{text:'ללא מקור.'}],quotes:[{evidence_id:good.id,text:good.quote},{evidence_id:good.id,text:'ציטוט שלא נאמר'}]},req);
+assert.equal(v.answer.length,1,'uncited and wrongly-cited claims removed');
+assert.equal(v.quotes.length,1,'non-verbatim quote removed');
+assert.equal(v.rejected.length,3);
+assert.equal(app.SYNTHESIS.available,false,'public site never calls a model');
 
 console.log('ALL SMOKE TESTS PASSED');
