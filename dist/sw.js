@@ -1,4 +1,4 @@
-const CACHE = 'consulting-knowledge-v3-3';
+const CACHE = 'consulting-knowledge-v3-4';
 const ASSETS = ['./', './index.html', './styles.css', './app.js', './manifest.webmanifest', './favicon.svg'];
 
 self.addEventListener('install', event => event.waitUntil(

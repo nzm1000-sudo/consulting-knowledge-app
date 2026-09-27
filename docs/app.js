@@ -551,10 +551,7 @@ function homeView(){
   return`
   <section class="hero">
     <h2 class="hero-q">על מי או על <em>מה</em> מדברים היום?</h2>
-    <svg class="ecg" viewBox="0 0 600 34" preserveAspectRatio="none" aria-hidden="true">
-      <defs><linearGradient id="ecg-grad" x1="0" x2="1"><stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--accent-2)"/></linearGradient></defs>
-      <path class="base" d="${ECG_PATH}"/><path class="beat" d="${ECG_PATH}"/>
-    </svg>
+    <canvas class="core" id="core" aria-hidden="true"></canvas>
     <form class="hero-search" id="hero-search" role="search">
       <input name="q" type="search" placeholder="שם, נושא או שאלה חופשית" autocomplete="off" aria-label="חיפוש במאגר">
       <button class="button primary" type="submit" aria-label="חיפוש">${ic('search')}</button>
@@ -919,6 +916,7 @@ function render(){
   el('view').innerHTML=views[r.key]();
   el('context').innerHTML=contextFor(r);
   bind();
+  if(window.__fx)window.__fx.poke();
   document.title=r.key==='home'?'מאגר הייעוץ':title+' · מאגר הייעוץ';
   currentRouteKey=routeId();
   restoreScroll(r);
@@ -1208,7 +1206,6 @@ function initMotion(){
 }
 
 /* ---------- שכבה חיה: רשת נוירונים של אור, מקור אור שעוקב אחרי הסמן, דופק ---------- */
-const ECG_PATH='M0 20 H150 L162 20 L170 8 L178 30 L186 2 L196 26 L204 20 H300 L312 20 L320 12 L328 26 L336 6 L346 24 L354 20 H600';
 function initFx(){
   const c=el('fx');if(!c||!c.getContext||typeof requestAnimationFrame!=='function')return;
   const ctx=c.getContext('2d');if(!ctx)return;
@@ -1220,10 +1217,10 @@ function initFx(){
     dpr=Math.min(window.devicePixelRatio||1,1.5);W=innerWidth;H=innerHeight;
     c.width=Math.round(W*dpr);c.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);
     const n=Math.max(22,Math.min(70,Math.round(W*H/24000)));
-    nodes=Array.from({length:n},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.28,vy:(Math.random()-.5)*.28,r:.8+Math.random()*1.6,ph:Math.random()*6.28,t:Math.random()<.35}));
+    nodes=Array.from({length:n},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.07,vy:(Math.random()-.5)*.07,r:.8+Math.random()*1.6,ph:Math.random()*6.28,t:Math.random()<.35}));
   }
-  // דופק: שתי פעימות קצרות ואז מנוחה, במחזור של 1.6 שניות
-  const beat=t=>{const x=(t%1600)/1600;const g=(c0,w)=>Math.exp(-((x-c0)**2)/(2*w*w));return g(.1,.035)+.65*g(.3,.04)};
+  // דופק במנוחה: שתי פעימות רכות ואז הפסקה ארוכה, במחזור של 4.8 שניות
+  const beat=t=>{const x=(t%4800)/4800;const g=(c0,w)=>Math.exp(-((x-c0)**2)/(2*w*w));return .7*g(.08,.03)+.45*g(.2,.035)};
   const rgba=(c3,a)=>`rgba(${c3[0]},${c3[1]},${c3[2]},${a})`;
   function draw(t){
     if(!col)readColors();
@@ -1231,12 +1228,12 @@ function initFx(){
     ctx.clearRect(0,0,W,H);
     const k=col.dark?1:.62, pulse=mode==='off'?0:beat(t);
     // אלומות אור רכות שנעות לאט, ונמשכות מעט לכיוון הסמן
-    if(!P.active&&moving){P.tx=.5+.32*Math.cos(t/9000);P.ty=.35+.22*Math.sin(t/7000)}
-    P.x+=(P.tx-P.x)*.04;P.y+=(P.ty-P.y)*.04;
+    if(!P.active&&moving){P.tx=.5+.28*Math.cos(t/40000);P.ty=.35+.18*Math.sin(t/32000)}
+    P.x+=(P.tx-P.x)*.012;P.y+=(P.ty-P.y)*.012;
     const lights=[
-      {x:W*(.72+.1*Math.sin(t/11000)),y:H*(.18+.08*Math.cos(t/9000)),r:Math.max(W,H)*.42,c:col.a,a:.20},
-      {x:W*(.18+.08*Math.cos(t/13000)),y:H*(.82+.06*Math.sin(t/10000)),r:Math.max(W,H)*.40,c:col.b,a:.18},
-      {x:W*P.x,y:H*P.y,r:Math.max(W,H)*.22,c:col.a,a:.16+.06*pulse}
+      {x:W*(.72+.06*Math.sin(t/60000)),y:H*(.18+.05*Math.cos(t/50000)),r:Math.max(W,H)*.42,c:col.a,a:.20},
+      {x:W*(.18+.05*Math.cos(t/70000)),y:H*(.82+.04*Math.sin(t/55000)),r:Math.max(W,H)*.40,c:col.b,a:.18},
+      {x:W*P.x,y:H*P.y,r:Math.max(W,H)*.22,c:col.a,a:.14+.03*pulse}
     ];
     ctx.globalCompositeOperation=col.dark?'lighter':'source-over';
     for(const L of lights){const g=ctx.createRadialGradient(L.x,L.y,0,L.x,L.y,L.r);g.addColorStop(0,rgba(L.c,L.a*k));g.addColorStop(1,rgba(L.c,0));ctx.fillStyle=g;ctx.fillRect(0,0,W,H)}
@@ -1245,18 +1242,19 @@ function initFx(){
     const mx=W*P.x,my=H*P.y,R=150;
     for(const n of nodes){
       if(moving){n.x+=n.vx;n.y+=n.vy;if(n.x<-20)n.x=W+20;if(n.x>W+20)n.x=-20;if(n.y<-20)n.y=H+20;if(n.y>H+20)n.y=-20;
-        const dx=mx-n.x,dy=my-n.y,d=Math.hypot(dx,dy);if(d<220&&d>1){n.x+=dx/d*.12;n.y+=dy/d*.12}}
+        const dx=mx-n.x,dy=my-n.y,d=Math.hypot(dx,dy);if(d<220&&d>1){n.x+=dx/d*.025;n.y+=dy/d*.025}}
     }
     ctx.lineWidth=1;
     for(let i=0;i<nodes.length;i++){const a=nodes[i];for(let j=i+1;j<nodes.length;j++){const b=nodes[j];const d=Math.hypot(a.x-b.x,a.y-b.y);if(d<R){
       const near=Math.max(0,1-Math.hypot((a.x+b.x)/2-mx,(a.y+b.y)/2-my)/260);
-      ctx.strokeStyle=rgba(a.t?col.b:col.a,(1-d/R)*(.16+.22*near+.12*pulse)*k);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke()}}}
+      ctx.strokeStyle=rgba(a.t?col.b:col.a,(1-d/R)*(.15+.18*near+.05*pulse)*k);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke()}}}
     for(const n of nodes){
-      const tw=.55+.45*Math.sin(t/900+n.ph);const near=Math.max(0,1-Math.hypot(n.x-mx,n.y-my)/220);
+      const tw=.7+.3*Math.sin(t/4200+n.ph);const near=Math.max(0,1-Math.hypot(n.x-mx,n.y-my)/220);
       const cc=n.t?col.b:col.a;
-      ctx.fillStyle=rgba(cc,(.10+.14*near+.10*pulse)*k*tw);ctx.beginPath();ctx.arc(n.x,n.y,n.r*5,0,6.283);ctx.fill();
-      ctx.fillStyle=rgba(cc,(.45+.4*near+.2*pulse)*k*(.6+.4*tw));ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,6.283);ctx.fill();
+      ctx.fillStyle=rgba(cc,(.10+.12*near+.04*pulse)*k*tw);ctx.beginPath();ctx.arc(n.x,n.y,n.r*5,0,6.283);ctx.fill();
+      ctx.fillStyle=rgba(cc,(.45+.35*near+.08*pulse)*k*(.6+.4*tw));ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,6.283);ctx.fill();
     }
+    drawCore(t,pulse);
     // כיוון הצללים: הפוך למקור האור
     if(t-last>120){last=t;const sx=((.5-P.x)*22).toFixed(0)+'px',sy=(8+(.5-P.y)*18).toFixed(0)+'px';
       if(sx!==lsx||sy!==lsy){lsx=sx;lsy=sy;const r=document.documentElement.style;r.setProperty('--sx',sx);r.setProperty('--sy',sy)}}
@@ -1269,8 +1267,57 @@ function initFx(){
   document.addEventListener('pointerleave',()=>{P.active=false});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(raf);raf=0}else start()});
   new MutationObserver(()=>{readColors();if(mode==='off')draw(performance.now())}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme','data-palette']});
+  /* ליבת הזיכרון: כדור גאודזי שמסתובב לאט, מסלולים עם חלקיקים, וגל אור שעובר עליו בכל פעימה */
+  const SPH=(()=>{const n=180,pts=[],ga=Math.PI*(3-Math.sqrt(5));
+    for(let i=0;i<n;i++){const y=1-2*(i+.5)/n,r=Math.sqrt(1-y*y),th=ga*i;pts.push([Math.cos(th)*r,y,Math.sin(th)*r])}
+    const pairs=[];for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){const a=pts[i],b=pts[j];if(Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2])<.30)pairs.push([i,j])}
+    return{pts,pairs}})();
+  const ORBITS=[{tilt:1.15,yaw:.2,rx:1.45,period:52000,ph:0},{tilt:-.55,yaw:1.1,rx:1.7,period:71000,ph:2},{tilt:.3,yaw:-.9,rx:1.28,period:43000,ph:4}];
+  let cc=null,cctx=null,cs=0,tiltX=.38,tiltY=0;
+  function drawCore(t,pulse){
+    const c2=document.getElementById('core');
+    if(!c2){cc=null;return}
+    if(c2!==cc){cc=c2;cctx=c2.getContext('2d')}
+    const size=c2.clientWidth||200;
+    if(Math.round(size*dpr)!==c2.width){c2.width=c2.height=Math.round(size*dpr);cs=size}
+    const g=cctx;g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,cs,cs);
+    const moving=mode==='full',cx=cs/2,cy=cs/2,R=cs*.27,k=col.dark?1:.85;
+    // הטיה עדינה לכיוון הסמן
+    tiltX+=((.38+(P.y-.35)*.35)-tiltX)*.01;tiltY+=(((P.x-.5)*.5)-tiltY)*.01;
+    const rot=moving?t/9000*.42:0; // סיבוב מלא בכ־2.2 דקות
+    const cX=Math.cos(tiltX),sX=Math.sin(tiltX),cY=Math.cos(rot+tiltY),sY=Math.sin(rot+tiltY);
+    const proj=p=>{let x=p[0]*cY+p[2]*sY,z=-p[0]*sY+p[2]*cY,y=p[1];const y2=y*cX-z*sX,z2=y*sX+z*cX;const f=2.6/(2.6+z2);return[cx+x*R*f,cy+y2*R*f,z2,f]};
+    // גל הפעימה: חזית אור שיורדת מהקוטב העליון בכל מחזור
+    const cyc=(t%4800)/4800,front=-1.3+Math.min(cyc/.6,1)*2.6; // גל של כ־3 שניות, ואז מנוחה
+    // הילה פנימית
+    const halo=g.createRadialGradient(cx,cy,0,cx,cy,R*1.9);
+    halo.addColorStop(0,rgba(col.a,(.28+.10*pulse)*k));halo.addColorStop(.45,rgba(col.b,.10*k));halo.addColorStop(1,rgba(col.b,0));
+    g.fillStyle=halo;g.fillRect(0,0,cs,cs);
+    const core=g.createRadialGradient(cx-R*.25,cy-R*.3,0,cx,cy,R*.55);
+    core.addColorStop(0,rgba([255,255,255],(col.dark?.35:.55)+.1*pulse));core.addColorStop(.4,rgba(col.a,.35*k));core.addColorStop(1,rgba(col.a,0));
+    g.fillStyle=core;g.beginPath();g.arc(cx,cy,R*.55,0,6.283);g.fill();
+    // מסלולים — החלק האחורי ואז הכדור ואז החלק הקדמי
+    const orbitPts=o=>{const out=[];for(let i=0;i<=72;i++){const a=i/72*6.283;let p=[Math.cos(a)*o.rx,0,Math.sin(a)*o.rx];
+      let y=p[1]*Math.cos(o.tilt)-p[2]*Math.sin(o.tilt),z=p[1]*Math.sin(o.tilt)+p[2]*Math.cos(o.tilt);p=[p[0]*Math.cos(o.yaw)+z*Math.sin(o.yaw),y,-p[0]*Math.sin(o.yaw)+z*Math.cos(o.yaw)];out.push(p)}return out};
+    const drawOrbits=front2=>{for(const o of ORBITS){const ps=orbitPts(o).map(proj);g.lineWidth=.8;
+      for(let i=0;i<ps.length-1;i++){const a=ps[i],b=ps[i+1];if((a[2]<0)!==front2)continue;g.strokeStyle=rgba(col.b,(front2?.32:.12)*k);g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke()}
+      const u=((moving?t:0)/o.period+o.ph/6.283)%1,idx=Math.floor(u*72),q=ps[idx];
+      if((q[2]<0)===front2){const gr=g.createRadialGradient(q[0],q[1],0,q[0],q[1],7*q[3]);gr.addColorStop(0,rgba([255,255,255],.95*k));gr.addColorStop(.3,rgba(col.a,.8*k));gr.addColorStop(1,rgba(col.a,0));g.fillStyle=gr;g.beginPath();g.arc(q[0],q[1],7*q[3],0,6.283);g.fill()}}};
+    drawOrbits(false);
+    const P3=SPH.pts.map(proj);
+    const lit=i=>{const d=Math.abs(SPH.pts[i][1]-front);return mode==='off'?0:Math.max(0,1-d/.35)*.9};
+    g.lineWidth=.7;
+    for(const[i,j]of SPH.pairs){const a=P3[i],b=P3[j],depth=(2-(a[2]+b[2])/2)/3;const l=(lit(i)+lit(j))/2;
+      g.strokeStyle=rgba(l>.05?col.a:col.b,(.06+.22*depth+.35*l)*k*(a[2]>0?.5:1));g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke()}
+    for(let i=0;i<P3.length;i++){const p=P3[i],front2=p[2]<0,l=lit(i);
+      g.fillStyle=rgba(l>.1?[255,255,255]:col.a,((front2?.55:.2)+.45*l)*k);g.beginPath();g.arc(p[0],p[1],(front2?1.25:.8)*p[3]+l*1.1,0,6.283);g.fill()}
+    drawOrbits(true);
+    // קשת אור היקפית
+    g.strokeStyle=rgba(col.a,(.18+.12*pulse)*k);g.lineWidth=1;g.beginPath();g.arc(cx,cy,R*1.02,0,6.283);g.stroke();
+  }
+
   resize();
-  window.__fx={mode(m){mode=m;start()}};
+  window.__fx={mode(m){mode=m;start()},poke(){if(mode==='off')draw(performance.now())}};
   mode=motionMode();start();
 }
 

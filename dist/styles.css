@@ -767,32 +767,32 @@ body::after{background-image:linear-gradient(var(--grid-tint) 1px,transparent 1p
 .step-advice .kitem{box-shadow:inset 0 1px 0 var(--hilite),0 14px 34px -12px var(--glow)}
 
 /* ---------- motion: alive, slow, gentle ---------- */
-@keyframes aurora{0%{transform:translate3d(0,0,0) scale(1) rotate(0deg)}50%{transform:translate3d(-5%,3%,0) scale(1.1) rotate(4deg)}100%{transform:translate3d(4%,-3%,0) scale(1.04) rotate(-3deg)}}
+@keyframes aurora{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(-2%,1.5%,0) scale(1.04)}100%{transform:translate3d(1.5%,-1%,0) scale(1.02)}}
 @keyframes breathe{0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 -2px 0 rgba(0,0,0,.18),0 4px 14px -6px var(--glow)}50%{box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 -2px 0 rgba(0,0,0,.18),0 8px 26px -4px var(--glow)}}
-@keyframes heartbeat{0%,100%{transform:scale(1)}12%{transform:scale(1.35)}24%{transform:scale(1)}36%{transform:scale(1.22)}52%{transform:scale(1)}}
-@keyframes pulse-ring{0%{box-shadow:0 0 0 0 var(--glow)}70%,100%{box-shadow:0 0 0 9px transparent}}
-@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes heartbeat{0%,100%{transform:scale(1)}8%{transform:scale(1.12)}16%{transform:scale(1)}24%{transform:scale(1.07)}36%{transform:scale(1)}}
+@keyframes pulse-ring{0%{box-shadow:0 0 0 0 var(--glow)}40%,100%{box-shadow:0 0 0 7px transparent}}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @keyframes shimmer{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
-@keyframes orb{0%,100%{transform:scale(1);opacity:.55}50%{transform:scale(1.12);opacity:.8}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+@keyframes orb{0%,100%{transform:scale(1);opacity:.5}50%{transform:scale(1.04);opacity:.7}}
 
-body::before{animation:aurora 22s ease-in-out infinite alternate;will-change:transform;inset:-6%}
-.brand-mark{animation:breathe 5.5s ease-in-out infinite}
-.privacy-dot{animation:heartbeat 1.6s ease-in-out infinite,pulse-ring 1.6s ease-out infinite}
-.nav-count-alert{display:inline-block;animation:heartbeat 1.6s ease-in-out infinite}
-.nav-item.active::before{animation:breathe-bar 4s ease-in-out infinite}
+body::before{animation:aurora 90s ease-in-out infinite alternate;will-change:transform;inset:-6%}
+.brand-mark{animation:breathe 10s ease-in-out infinite}
+.privacy-dot{animation:heartbeat 4.8s ease-in-out infinite,pulse-ring 4.8s ease-out infinite}
+.nav-count-alert{display:inline-block;animation:heartbeat 4.8s ease-in-out infinite}
+.nav-item.active::before{animation:breathe-bar 9s ease-in-out infinite}
 @keyframes breathe-bar{0%,100%{opacity:.75}50%{opacity:1}}
 .zm-list li.zm-next{position:relative}
-.zm-list li.zm-next span:first-child::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-inline-end:7px;vertical-align:middle;animation:heartbeat 1.6s ease-in-out infinite,pulse-ring 1.6s ease-out infinite}
-.step-label::before{animation:pulse-ring 3.2s ease-out infinite}
-.stat-strip strong{background-size:200% 200%;animation:shimmer 9s ease-in-out infinite}
-.hero-q em{background-size:200% 200%;animation:shimmer 7s ease-in-out infinite}
+.zm-list li.zm-next span:first-child::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-inline-end:7px;vertical-align:middle;animation:heartbeat 4.8s ease-in-out infinite,pulse-ring 4.8s ease-out infinite}
+.step-label::before{animation:pulse-ring 9.6s ease-out infinite}
+.stat-strip strong{background-size:200% 200%;animation:shimmer 24s ease-in-out infinite}
+.hero-q em{background-size:200% 200%;animation:shimmer 20s ease-in-out infinite}
 .hero{position:relative;isolation:isolate}
-.hero::before{content:"";position:absolute;z-index:-1;width:340px;height:340px;inset-inline-end:-80px;top:-140px;border-radius:50%;background:radial-gradient(circle,var(--glow),transparent 65%);filter:blur(30px);animation:orb 8s ease-in-out infinite;pointer-events:none}
-.stat-strip a:nth-child(1){animation:float 7s ease-in-out infinite}
-.stat-strip a:nth-child(2){animation:float 7s ease-in-out -1.8s infinite}
-.stat-strip a:nth-child(3){animation:float 7s ease-in-out -3.6s infinite}
-.stat-strip a:nth-child(4){animation:float 7s ease-in-out -5.4s infinite}
+.hero::before{content:"";position:absolute;z-index:-1;width:340px;height:340px;inset-inline-end:-80px;top:-140px;border-radius:50%;background:radial-gradient(circle,var(--glow),transparent 65%);filter:blur(30px);animation:orb 20s ease-in-out infinite;pointer-events:none}
+.stat-strip a:nth-child(1){animation:float 16s ease-in-out infinite}
+.stat-strip a:nth-child(2){animation:float 16s ease-in-out -4.1s infinite}
+.stat-strip a:nth-child(3){animation:float 16s ease-in-out -8.2s infinite}
+.stat-strip a:nth-child(4){animation:float 16s ease-in-out -12.3s infinite}
 .stat-strip a:hover{animation-play-state:paused}
 .view>*{animation:rise .5s cubic-bezier(.2,.7,.2,1) both}
 .view>*:nth-child(2){animation-delay:.05s}.view>*:nth-child(3){animation-delay:.1s}.view>*:nth-child(4){animation-delay:.15s}.view>*:nth-child(5){animation-delay:.2s}
@@ -823,29 +823,34 @@ html,body{overflow-x:clip}
 }
 .stat-strip a:hover,.principle-card:hover{box-shadow:inset 0 1px 0 var(--hilite),calc(var(--sx) * 1.6) calc(var(--sy) * 1.6) 48px -12px var(--shade),0 0 0 1px color-mix(in srgb,var(--accent) 25%,transparent),0 0 30px -8px var(--glow)}
 
-/* heartbeat line under the hero title */
-.ecg{display:block;width:min(420px,100%);height:34px;margin:-4px 0 12px;overflow:visible}
-.ecg .base{fill:none;stroke:var(--line);stroke-width:1.2}
-.ecg .beat{fill:none;stroke:url(#ecg-grad);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:90 510;animation:ecg 3.2s linear infinite;filter:drop-shadow(0 0 4px var(--glow))}
-@keyframes ecg{from{stroke-dashoffset:600}to{stroke-dashoffset:0}}
 
 /* rotating light ring around the main search */
 .hero-search{position:relative;border-radius:calc(var(--r-s) + 3px)}
 .hero-search::before{content:"";position:absolute;inset:-3px;border-radius:inherit;padding:2px;pointer-events:none;
   background:conic-gradient(from var(--ang),transparent 0 55%,var(--accent) 72%,var(--accent-2) 86%,transparent 100%);
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);
-  animation:spin 7s linear infinite;opacity:.85}
+  animation:spin 40s linear infinite;opacity:.6}
 @keyframes spin{to{--ang:360deg}}
 
 /* section headings get a small lit marker */
 .section-head h2{display:flex;align-items:center;gap:8px}
-.section-head h2::before{content:"";width:6px;height:6px;border-radius:2px;background:var(--grad);box-shadow:0 0 10px var(--glow);transform:rotate(45deg);animation:breathe-bar 3.2s ease-in-out infinite}
+.section-head h2::before{content:"";width:6px;height:6px;border-radius:2px;background:var(--grad);box-shadow:0 0 10px var(--glow);transform:rotate(45deg);animation:breathe-bar 9s ease-in-out infinite}
 
 /* calm mode: nothing moves, light still breathes */
 [data-motion="calm"] body::before,[data-motion="calm"] .stat-strip a,[data-motion="calm"] .view>*,[data-motion="calm"] .stack>*,[data-motion="calm"] .context>*,[data-motion="calm"] .chain-step{animation:none}
-[data-motion="calm"] .privacy-dot,[data-motion="calm"] .nav-count-alert,[data-motion="calm"] .zm-list li.zm-next span:first-child::before{animation:pulse-ring 1.6s ease-out infinite}
-[data-motion="calm"] .hero::before{animation:orb-calm 8s ease-in-out infinite}
+[data-motion="calm"] .privacy-dot,[data-motion="calm"] .nav-count-alert,[data-motion="calm"] .zm-list li.zm-next span:first-child::before{animation:pulse-ring 4.8s ease-out infinite}
+[data-motion="calm"] .hero::before{animation:orb-calm 20s ease-in-out infinite}
 @keyframes orb-calm{0%,100%{opacity:.45}50%{opacity:.85}}
-[data-motion="calm"] .ecg .beat{animation-duration:5s}
 
 .motion-btn .motion-state{margin-inline-start:auto;font-size:12px;color:var(--muted)}
+
+/* ---------- memory core (v3.4) ---------- */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) 200px;column-gap:28px;align-items:center}
+.hero>*{grid-column:1}
+.hero .core{grid-column:2;grid-row:1/span 3;width:200px;height:200px;display:block;justify-self:center}
+.hero::before{inset-inline-end:-40px;top:-60px}
+@media (max-width:760px){
+  .hero{grid-template-columns:minmax(0,1fr) 92px;column-gap:12px}
+  .hero .core{width:92px;height:92px;grid-row:1;align-self:start}
+  .hero .hero-search,.hero .example-row{grid-column:1/-1}
+}
