@@ -551,7 +551,7 @@ function homeView(){
   return`
   <section class="hero">
     <h2 class="hero-q">על מי או על <em>מה</em> מדברים היום?</h2>
-    <canvas class="core" id="core" aria-hidden="true"></canvas>
+    <canvas class="pulse" id="pulse" aria-hidden="true"></canvas>
     <form class="hero-search" id="hero-search" role="search">
       <input name="q" type="search" placeholder="שם, נושא או שאלה חופשית" autocomplete="off" aria-label="חיפוש במאגר">
       <button class="button primary" type="submit" aria-label="חיפוש">${ic('search')}</button>
@@ -1254,7 +1254,7 @@ function initFx(){
       ctx.fillStyle=rgba(cc,(.10+.12*near+.04*pulse)*k*tw);ctx.beginPath();ctx.arc(n.x,n.y,n.r*5,0,6.283);ctx.fill();
       ctx.fillStyle=rgba(cc,(.45+.35*near+.08*pulse)*k*(.6+.4*tw));ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,6.283);ctx.fill();
     }
-    drawCore(t,pulse);
+    drawPulse(t);
     // כיוון הצללים: הפוך למקור האור
     if(t-last>120){last=t;const sx=((.5-P.x)*22).toFixed(0)+'px',sy=(8+(.5-P.y)*18).toFixed(0)+'px';
       if(sx!==lsx||sy!==lsy){lsx=sx;lsy=sy;const r=document.documentElement.style;r.setProperty('--sx',sx);r.setProperty('--sy',sy)}}
@@ -1267,53 +1267,59 @@ function initFx(){
   document.addEventListener('pointerleave',()=>{P.active=false});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(raf);raf=0}else start()});
   new MutationObserver(()=>{readColors();if(mode==='off')draw(performance.now())}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme','data-palette']});
-  /* ליבת הזיכרון: כדור גאודזי שמסתובב לאט, מסלולים עם חלקיקים, וגל אור שעובר עליו בכל פעימה */
-  const SPH=(()=>{const n=180,pts=[],ga=Math.PI*(3-Math.sqrt(5));
-    for(let i=0;i<n;i++){const y=1-2*(i+.5)/n,r=Math.sqrt(1-y*y),th=ga*i;pts.push([Math.cos(th)*r,y,Math.sin(th)*r])}
-    const pairs=[];for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){const a=pts[i],b=pts[j];if(Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2])<.30)pairs.push([i,j])}
-    return{pts,pairs}})();
-  const ORBITS=[{tilt:1.15,yaw:.2,rx:1.45,period:52000,ph:0},{tilt:-.55,yaw:1.1,rx:1.7,period:71000,ph:2},{tilt:.3,yaw:-.9,rx:1.28,period:43000,ph:4}];
-  let cc=null,cctx=null,cs=0,tiltX=.38,tiltY=0;
-  function drawCore(t,pulse){
-    const c2=document.getElementById('core');
-    if(!c2){cc=null;return}
-    if(c2!==cc){cc=c2;cctx=c2.getContext('2d')}
-    const size=c2.clientWidth||200;
-    if(Math.round(size*dpr)!==c2.width){c2.width=c2.height=Math.round(size*dpr);cs=size}
-    const g=cctx;g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,cs,cs);
-    const moving=mode==='full',cx=cs/2,cy=cs/2,R=cs*.27,k=col.dark?1:.85;
-    // הטיה עדינה לכיוון הסמן
-    tiltX+=((.38+(P.y-.35)*.35)-tiltX)*.01;tiltY+=(((P.x-.5)*.5)-tiltY)*.01;
-    const rot=moving?t/9000*.42:0; // סיבוב מלא בכ־2.2 דקות
-    const cX=Math.cos(tiltX),sX=Math.sin(tiltX),cY=Math.cos(rot+tiltY),sY=Math.sin(rot+tiltY);
-    const proj=p=>{let x=p[0]*cY+p[2]*sY,z=-p[0]*sY+p[2]*cY,y=p[1];const y2=y*cX-z*sX,z2=y*sX+z*cX;const f=2.6/(2.6+z2);return[cx+x*R*f,cy+y2*R*f,z2,f]};
-    // גל הפעימה: חזית אור שיורדת מהקוטב העליון בכל מחזור
-    const cyc=(t%4800)/4800,front=-1.3+Math.min(cyc/.6,1)*2.6; // גל של כ־3 שניות, ואז מנוחה
-    // הילה פנימית
-    const halo=g.createRadialGradient(cx,cy,0,cx,cy,R*1.9);
-    halo.addColorStop(0,rgba(col.a,(.28+.10*pulse)*k));halo.addColorStop(.45,rgba(col.b,.10*k));halo.addColorStop(1,rgba(col.b,0));
-    g.fillStyle=halo;g.fillRect(0,0,cs,cs);
-    const core=g.createRadialGradient(cx-R*.25,cy-R*.3,0,cx,cy,R*.55);
-    core.addColorStop(0,rgba([255,255,255],(col.dark?.35:.55)+.1*pulse));core.addColorStop(.4,rgba(col.a,.35*k));core.addColorStop(1,rgba(col.a,0));
-    g.fillStyle=core;g.beginPath();g.arc(cx,cy,R*.55,0,6.283);g.fill();
-    // מסלולים — החלק האחורי ואז הכדור ואז החלק הקדמי
-    const orbitPts=o=>{const out=[];for(let i=0;i<=72;i++){const a=i/72*6.283;let p=[Math.cos(a)*o.rx,0,Math.sin(a)*o.rx];
-      let y=p[1]*Math.cos(o.tilt)-p[2]*Math.sin(o.tilt),z=p[1]*Math.sin(o.tilt)+p[2]*Math.cos(o.tilt);p=[p[0]*Math.cos(o.yaw)+z*Math.sin(o.yaw),y,-p[0]*Math.sin(o.yaw)+z*Math.cos(o.yaw)];out.push(p)}return out};
-    const drawOrbits=front2=>{for(const o of ORBITS){const ps=orbitPts(o).map(proj);g.lineWidth=.8;
-      for(let i=0;i<ps.length-1;i++){const a=ps[i],b=ps[i+1];if((a[2]<0)!==front2)continue;g.strokeStyle=rgba(col.b,(front2?.32:.12)*k);g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke()}
-      const u=((moving?t:0)/o.period+o.ph/6.283)%1,idx=Math.floor(u*72),q=ps[idx];
-      if((q[2]<0)===front2){const gr=g.createRadialGradient(q[0],q[1],0,q[0],q[1],7*q[3]);gr.addColorStop(0,rgba([255,255,255],.95*k));gr.addColorStop(.3,rgba(col.a,.8*k));gr.addColorStop(1,rgba(col.a,0));g.fillStyle=gr;g.beginPath();g.arc(q[0],q[1],7*q[3],0,6.283);g.fill()}}};
-    drawOrbits(false);
-    const P3=SPH.pts.map(proj);
-    const lit=i=>{const d=Math.abs(SPH.pts[i][1]-front);return mode==='off'?0:Math.max(0,1-d/.35)*.9};
-    g.lineWidth=.7;
-    for(const[i,j]of SPH.pairs){const a=P3[i],b=P3[j],depth=(2-(a[2]+b[2])/2)/3;const l=(lit(i)+lit(j))/2;
-      g.strokeStyle=rgba(l>.05?col.a:col.b,(.06+.22*depth+.35*l)*k*(a[2]>0?.5:1));g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke()}
-    for(let i=0;i<P3.length;i++){const p=P3[i],front2=p[2]<0,l=lit(i);
-      g.fillStyle=rgba(l>.1?[255,255,255]:col.a,((front2?.55:.2)+.45*l)*k);g.beginPath();g.arc(p[0],p[1],(front2?1.25:.8)*p[3]+l*1.1,0,6.283);g.fill()}
-    drawOrbits(true);
-    // קשת אור היקפית
-    g.strokeStyle=rgba(col.a,(.18+.12*pulse)*k);g.lineWidth=1;g.beginPath();g.arc(cx,cy,R*1.02,0,6.283);g.stroke();
+  /* קו הדופק: מוניטור עם צורת פעימה אמיתית, ראש כתיבה שנע מימין לשמאל, שובל שדוהה ורשת מדידה */
+  const g0=(x,c0,w)=>Math.exp(-((x-c0)**2)/(2*w*w));
+  // פעימה אחת: גל P, קומפלקס QRS חד, וגל T רחב
+  const wave=x=>.13*g0(x,.16,.028)-.09*g0(x,.285,.007)+1*g0(x,.305,.008)-.24*g0(x,.328,.009)+.3*g0(x,.52,.05);
+  const BEAT=4800,SWEEP=9600;
+  let pc=null,pctx=null,pw=0,ph=0;
+  function drawPulse(t){
+    const c2=document.getElementById('pulse');
+    if(!c2){pc=null;return}
+    if(c2!==pc){pc=c2;pctx=c2.getContext('2d')}
+    const w=c2.clientWidth,h=c2.clientHeight;if(!w||!h)return;
+    if(Math.round(w*dpr)!==c2.width||Math.round(h*dpr)!==c2.height){c2.width=Math.round(w*dpr);c2.height=Math.round(h*dpr)}
+    pw=w;ph=h;const g=pctx;g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,w,h);
+    const k=col.dark?1:.9,mid=h*.62,amp=h*.5,sweeping=mode==='full';
+    // רשת מדידה דקה, דוהה לכיוון הקצוות
+    const fade=g.createLinearGradient(0,0,w,0);fade.addColorStop(0,'rgba(0,0,0,0)');fade.addColorStop(.15,'#000');fade.addColorStop(.85,'#000');fade.addColorStop(1,'rgba(0,0,0,0)');
+    g.save();
+    for(let x=w;x>0;x-=8){const major=Math.round((w-x)/8)%5===0;g.strokeStyle=rgba(col.a,(major?.10:.04)*k);g.lineWidth=1;g.beginPath();g.moveTo(x+.5,0);g.lineTo(x+.5,h);g.stroke()}
+    for(let y=mid%8;y<h;y+=8){const major=Math.abs(y-mid)<1;g.strokeStyle=rgba(col.a,(major?.12:.04)*k);g.beginPath();g.moveTo(0,y+.5);g.lineTo(w,y+.5);g.stroke()}
+    g.globalCompositeOperation='destination-in';g.fillStyle=fade;g.fillRect(0,0,w,h);g.restore();
+    // ראש הכתיבה: נע מימין לשמאל, סבב מלא ב־9.6 שניות (שתי פעימות על המסך)
+    const now=sweeping?t:SWEEP*.72;
+    const head=(now%SWEEP)/SWEEP;
+    const val=(time,lag,sc)=>{const x=(((time-lag)%BEAT)+BEAT)%BEAT/BEAT;return wave(x)*sc+.025*Math.sin(time/5200)};
+    const layers=[
+      {lag:0,sc:1,c:col.a,lw:1.7,glow:true,alpha:1},
+      {lag:BEAT*.045,sc:.42,c:col.b,lw:1,glow:false,alpha:.45}
+    ];
+    const step=2;
+    for(const L of layers){
+      let px=null,py=null;
+      for(let x=w;x>=0;x-=step){
+        const prog=(w-x)/w;
+        const age=((head-prog)%1+1)%1*SWEEP;          // כמה זמן עבר מאז שהראש כתב כאן
+        const gap=age>SWEEP*.955;                       // רווח מחיקה קצר לפני הראש
+        const y=mid-val(now-age,L.lag,L.sc)*amp;
+        if(px!==null&&!gap){
+          const life=sweeping?Math.exp(-age/(SWEEP*.5)):.75; // שובל זרחני שדוהה
+          const a=life*L.alpha*k;
+          if(L.glow){g.strokeStyle=rgba(L.c,a*.16);g.lineWidth=6;g.lineCap='round';g.beginPath();g.moveTo(px,py);g.lineTo(x,y);g.stroke()}
+          g.strokeStyle=rgba(L.c,a);g.lineWidth=L.lw;g.lineCap='round';g.beginPath();g.moveTo(px,py);g.lineTo(x,y);g.stroke();
+        }
+        px=gap?null:x;py=y;
+      }
+    }
+    if(sweeping){
+      // ראש זוהר ופס סריקה אנכי
+      const hx=w-head*w,hy=mid-val(now,0,1)*amp;
+      const sc=g.createLinearGradient(0,0,0,h);sc.addColorStop(0,rgba(col.a,0));sc.addColorStop(.5,rgba(col.a,.18*k));sc.addColorStop(1,rgba(col.a,0));
+      g.fillStyle=sc;g.fillRect(hx-1,0,2,h);
+      const hg=g.createRadialGradient(hx,hy,0,hx,hy,9);hg.addColorStop(0,rgba([255,255,255],.95*k));hg.addColorStop(.3,rgba(col.a,.8*k));hg.addColorStop(1,rgba(col.a,0));
+      g.fillStyle=hg;g.beginPath();g.arc(hx,hy,9,0,6.283);g.fill();
+    }
   }
 
   resize();
