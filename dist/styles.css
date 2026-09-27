@@ -545,9 +545,9 @@ dialog::backdrop{background:rgba(10,14,18,.45)}
   .topbar-id p{display:none}
   .row{padding:12px}
 }
-@media (prefers-reduced-motion:reduce){
-  *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
-}
+/* motion is controlled by data-motion (full | calm | off), chosen in the menu.
+   Default follows the OS: reduce-motion → calm (light and glow only, nothing moves). */
+[data-motion="off"] *,[data-motion="off"] *::before,[data-motion="off"] *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 @media print{
   .sidebar,.context,.topbar-actions,.mobile-nav,.menu-btn{display:none!important}
   .shell{display:block}
@@ -663,7 +663,7 @@ dialog::backdrop{background:rgba(9,14,24,.45);backdrop-filter:blur(4px);-webkit-
 
 @media (max-width:1240px){.context{background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}}
 @media (max-width:860px){.sidebar{background:var(--glass-hi)}}
-@media (prefers-reduced-motion:reduce){.principle-card{transform:none!important}}
+
 @media (prefers-reduced-transparency:reduce){.sidebar,.context,.topbar{backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--surface)}}
 
 /* ============================================================
@@ -767,16 +767,16 @@ body::after{background-image:linear-gradient(var(--grid-tint) 1px,transparent 1p
 .step-advice .kitem{box-shadow:inset 0 1px 0 var(--hilite),0 14px 34px -12px var(--glow)}
 
 /* ---------- motion: alive, slow, gentle ---------- */
-@keyframes aurora{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(-3%,2%,0) scale(1.06)}100%{transform:translate3d(2%,-2%,0) scale(1.02)}}
+@keyframes aurora{0%{transform:translate3d(0,0,0) scale(1) rotate(0deg)}50%{transform:translate3d(-5%,3%,0) scale(1.1) rotate(4deg)}100%{transform:translate3d(4%,-3%,0) scale(1.04) rotate(-3deg)}}
 @keyframes breathe{0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 -2px 0 rgba(0,0,0,.18),0 4px 14px -6px var(--glow)}50%{box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 -2px 0 rgba(0,0,0,.18),0 8px 26px -4px var(--glow)}}
 @keyframes heartbeat{0%,100%{transform:scale(1)}12%{transform:scale(1.35)}24%{transform:scale(1)}36%{transform:scale(1.22)}52%{transform:scale(1)}}
 @keyframes pulse-ring{0%{box-shadow:0 0 0 0 var(--glow)}70%,100%{box-shadow:0 0 0 9px transparent}}
 @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes shimmer{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
 @keyframes orb{0%,100%{transform:scale(1);opacity:.55}50%{transform:scale(1.12);opacity:.8}}
 
-body::before{animation:aurora 38s ease-in-out infinite alternate;will-change:transform;inset:-6%}
+body::before{animation:aurora 22s ease-in-out infinite alternate;will-change:transform;inset:-6%}
 .brand-mark{animation:breathe 5.5s ease-in-out infinite}
 .privacy-dot{animation:heartbeat 1.6s ease-in-out infinite,pulse-ring 1.6s ease-out infinite}
 .nav-count-alert{display:inline-block;animation:heartbeat 1.6s ease-in-out infinite}
@@ -802,7 +802,50 @@ body::before{animation:aurora 38s ease-in-out infinite alternate;will-change:tra
 .context>*:nth-child(2){animation-delay:.07s}.context>*:nth-child(3){animation-delay:.14s}.context>*:nth-child(4){animation-delay:.21s}
 .chain-step{animation:rise .5s cubic-bezier(.2,.7,.2,1) both}
 .chain-step:nth-child(2){animation-delay:.05s}.chain-step:nth-child(3){animation-delay:.1s}.chain-step:nth-child(4){animation-delay:.15s}.chain-step:nth-child(5){animation-delay:.2s}.chain-step:nth-child(6){animation-delay:.25s}.chain-step:nth-child(7){animation-delay:.3s}.chain-step:nth-child(8){animation-delay:.35s}
-@media (prefers-reduced-motion:reduce){body::before{inset:0}.hero::before{display:none}}
+
 main{overflow-x:clip}
 html,body{overflow-x:clip}
 .k-advice{--k:var(--accent)}
+
+/* ============================================================
+   Living layer (v3.3): neural light field, moving light source,
+   heartbeat line, rotating light ring.
+   ============================================================ */
+@property --ang{syntax:'<angle>';inherits:false;initial-value:0deg}
+:root{--sx:0px;--sy:12px;--shade:rgba(15,23,32,.20)}
+[data-theme="dark"]{--shade:rgba(0,0,0,.62)}
+#fx{position:fixed;inset:0;width:100vw;height:100vh;z-index:-1;pointer-events:none;display:block}
+
+/* shadows fall away from a light that follows the pointer */
+.panel,.ctx-card,.stat-strip a,.principle-card{
+  box-shadow:inset 0 1px 0 var(--hilite),inset 0 -1px 0 rgba(0,0,0,.03),var(--sx) var(--sy) 34px -14px var(--shade),calc(var(--sx) * .3) calc(var(--sy) * .3) 8px -4px var(--shade);
+  transition:box-shadow .5s ease-out,transform .2s;
+}
+.stat-strip a:hover,.principle-card:hover{box-shadow:inset 0 1px 0 var(--hilite),calc(var(--sx) * 1.6) calc(var(--sy) * 1.6) 48px -12px var(--shade),0 0 0 1px color-mix(in srgb,var(--accent) 25%,transparent),0 0 30px -8px var(--glow)}
+
+/* heartbeat line under the hero title */
+.ecg{display:block;width:min(420px,100%);height:34px;margin:-4px 0 12px;overflow:visible}
+.ecg .base{fill:none;stroke:var(--line);stroke-width:1.2}
+.ecg .beat{fill:none;stroke:url(#ecg-grad);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:90 510;animation:ecg 3.2s linear infinite;filter:drop-shadow(0 0 4px var(--glow))}
+@keyframes ecg{from{stroke-dashoffset:600}to{stroke-dashoffset:0}}
+
+/* rotating light ring around the main search */
+.hero-search{position:relative;border-radius:calc(var(--r-s) + 3px)}
+.hero-search::before{content:"";position:absolute;inset:-3px;border-radius:inherit;padding:2px;pointer-events:none;
+  background:conic-gradient(from var(--ang),transparent 0 55%,var(--accent) 72%,var(--accent-2) 86%,transparent 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);
+  animation:spin 7s linear infinite;opacity:.85}
+@keyframes spin{to{--ang:360deg}}
+
+/* section headings get a small lit marker */
+.section-head h2{display:flex;align-items:center;gap:8px}
+.section-head h2::before{content:"";width:6px;height:6px;border-radius:2px;background:var(--grad);box-shadow:0 0 10px var(--glow);transform:rotate(45deg);animation:breathe-bar 3.2s ease-in-out infinite}
+
+/* calm mode: nothing moves, light still breathes */
+[data-motion="calm"] body::before,[data-motion="calm"] .stat-strip a,[data-motion="calm"] .view>*,[data-motion="calm"] .stack>*,[data-motion="calm"] .context>*,[data-motion="calm"] .chain-step{animation:none}
+[data-motion="calm"] .privacy-dot,[data-motion="calm"] .nav-count-alert,[data-motion="calm"] .zm-list li.zm-next span:first-child::before{animation:pulse-ring 1.6s ease-out infinite}
+[data-motion="calm"] .hero::before{animation:orb-calm 8s ease-in-out infinite}
+@keyframes orb-calm{0%,100%{opacity:.45}50%{opacity:.85}}
+[data-motion="calm"] .ecg .beat{animation-duration:5s}
+
+.motion-btn .motion-state{margin-inline-start:auto;font-size:12px;color:var(--muted)}

@@ -551,6 +551,10 @@ function homeView(){
   return`
   <section class="hero">
     <h2 class="hero-q">על מי או על <em>מה</em> מדברים היום?</h2>
+    <svg class="ecg" viewBox="0 0 600 34" preserveAspectRatio="none" aria-hidden="true">
+      <defs><linearGradient id="ecg-grad" x1="0" x2="1"><stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--accent-2)"/></linearGradient></defs>
+      <path class="base" d="${ECG_PATH}"/><path class="beat" d="${ECG_PATH}"/>
+    </svg>
     <form class="hero-search" id="hero-search" role="search">
       <input name="q" type="search" placeholder="שם, נושא או שאלה חופשית" autocomplete="off" aria-label="חיפוש במאגר">
       <button class="button primary" type="submit" aria-label="חיפוש">${ic('search')}</button>
@@ -945,7 +949,7 @@ function navHtml(activeKey,mobile){
 function flashLine(mid,seg){
   const t=document.getElementById('ev-'+mid+'-'+seg);
   if(!t)return;
-  t.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+  t.scrollIntoView({block:'center',behavior:motionMode()==='full'?'smooth':'auto'});
   t.classList.remove('tr-flash');void t.offsetWidth;t.classList.add('tr-flash');
 }
 function openSource(mid,seg){
@@ -1005,7 +1009,7 @@ function bind(){
 }
 // הטיה תלת־ממדית עדינה לכרטיסי עקרונות, לפי מיקום הסמן
 function bindTilt(){
-  if(!window.matchMedia||matchMedia('(prefers-reduced-motion: reduce)').matches||!matchMedia('(hover: hover)').matches)return;
+  if(!window.matchMedia||motionMode()!=='full'||!matchMedia('(hover: hover)').matches)return;
   qsa('.stat-strip a').forEach(c=>{
     c.onpointermove=e=>{const r=c.getBoundingClientRect();c.style.setProperty('--mx',((e.clientX-r.left)/r.width*100)+'%');c.style.setProperty('--my',((e.clientY-r.top)/r.height*100)+'%')};
   });
@@ -1187,6 +1191,89 @@ function initPalette(){
   qsa('.swatch').forEach(b=>b.onclick=()=>{applyPalette(b.dataset.palette);toast('פלטה: '+b.getAttribute('aria-label'))});
   applyPalette(k);
 }
+/* ---------- תנועה: מלאה / עדינה / כבויה ---------- */
+const MOTION=[{k:'full',n:'מלאה'},{k:'calm',n:'עדינה'},{k:'off',n:'כבויה'}];
+function motionMode(){return document.documentElement.dataset.motion||'full'}
+function applyMotion(k){
+  document.documentElement.dataset.motion=k;
+  const s=document.querySelector('#motion-btn .motion-state');if(s)s.textContent=MOTION.find(m=>m.k===k).n;
+  if(window.__fx)window.__fx.mode(k);
+}
+function initMotion(){
+  let k=null;try{k=localStorage.getItem('consultingMotion')}catch{}
+  if(!MOTION.some(m=>m.k===k))k=(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)?'calm':'full';
+  applyMotion(k);
+  const b=el('motion-btn');
+  if(b)b.onclick=()=>{const i=MOTION.findIndex(m=>m.k===motionMode());const n=MOTION[(i+1)%MOTION.length].k;applyMotion(n);try{localStorage.setItem('consultingMotion',n)}catch{};toast('תנועה: '+MOTION.find(m=>m.k===n).n);render()};
+}
+
+/* ---------- שכבה חיה: רשת נוירונים של אור, מקור אור שעוקב אחרי הסמן, דופק ---------- */
+const ECG_PATH='M0 20 H150 L162 20 L170 8 L178 30 L186 2 L196 26 L204 20 H300 L312 20 L320 12 L328 26 L336 6 L346 24 L354 20 H600';
+function initFx(){
+  const c=el('fx');if(!c||!c.getContext||typeof requestAnimationFrame!=='function')return;
+  const ctx=c.getContext('2d');if(!ctx)return;
+  let W=0,H=0,dpr=1,nodes=[],col=null,mode='full',raf=0,last=0,prev=0,lsx='',lsy='';
+  const P={x:.62,y:.25,tx:.62,ty:.25,active:false};
+  const rgb=h=>{h=String(h||'').trim().replace('#','');if(h.length===3)h=h.split('').map(x=>x+x).join('');const n=parseInt(h,16);return isNaN(n)?[14,107,98]:[n>>16&255,n>>8&255,n&255]};
+  function readColors(){const cs=getComputedStyle(document.documentElement);col={a:rgb(cs.getPropertyValue('--accent')),b:rgb(cs.getPropertyValue('--accent-2')),dark:document.documentElement.dataset.theme==='dark'}}
+  function resize(){
+    dpr=Math.min(window.devicePixelRatio||1,1.5);W=innerWidth;H=innerHeight;
+    c.width=Math.round(W*dpr);c.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);
+    const n=Math.max(22,Math.min(70,Math.round(W*H/24000)));
+    nodes=Array.from({length:n},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.28,vy:(Math.random()-.5)*.28,r:.8+Math.random()*1.6,ph:Math.random()*6.28,t:Math.random()<.35}));
+  }
+  // דופק: שתי פעימות קצרות ואז מנוחה, במחזור של 1.6 שניות
+  const beat=t=>{const x=(t%1600)/1600;const g=(c0,w)=>Math.exp(-((x-c0)**2)/(2*w*w));return g(.1,.035)+.65*g(.3,.04)};
+  const rgba=(c3,a)=>`rgba(${c3[0]},${c3[1]},${c3[2]},${a})`;
+  function draw(t){
+    if(!col)readColors();
+    const moving=mode==='full';
+    ctx.clearRect(0,0,W,H);
+    const k=col.dark?1:.62, pulse=mode==='off'?0:beat(t);
+    // אלומות אור רכות שנעות לאט, ונמשכות מעט לכיוון הסמן
+    if(!P.active&&moving){P.tx=.5+.32*Math.cos(t/9000);P.ty=.35+.22*Math.sin(t/7000)}
+    P.x+=(P.tx-P.x)*.04;P.y+=(P.ty-P.y)*.04;
+    const lights=[
+      {x:W*(.72+.1*Math.sin(t/11000)),y:H*(.18+.08*Math.cos(t/9000)),r:Math.max(W,H)*.42,c:col.a,a:.20},
+      {x:W*(.18+.08*Math.cos(t/13000)),y:H*(.82+.06*Math.sin(t/10000)),r:Math.max(W,H)*.40,c:col.b,a:.18},
+      {x:W*P.x,y:H*P.y,r:Math.max(W,H)*.22,c:col.a,a:.16+.06*pulse}
+    ];
+    ctx.globalCompositeOperation=col.dark?'lighter':'source-over';
+    for(const L of lights){const g=ctx.createRadialGradient(L.x,L.y,0,L.x,L.y,L.r);g.addColorStop(0,rgba(L.c,L.a*k));g.addColorStop(1,rgba(L.c,0));ctx.fillStyle=g;ctx.fillRect(0,0,W,H)}
+    ctx.globalCompositeOperation='source-over';
+    // רשת הקשרים: נקודות ידע שמתחברות כשהן קרובות
+    const mx=W*P.x,my=H*P.y,R=150;
+    for(const n of nodes){
+      if(moving){n.x+=n.vx;n.y+=n.vy;if(n.x<-20)n.x=W+20;if(n.x>W+20)n.x=-20;if(n.y<-20)n.y=H+20;if(n.y>H+20)n.y=-20;
+        const dx=mx-n.x,dy=my-n.y,d=Math.hypot(dx,dy);if(d<220&&d>1){n.x+=dx/d*.12;n.y+=dy/d*.12}}
+    }
+    ctx.lineWidth=1;
+    for(let i=0;i<nodes.length;i++){const a=nodes[i];for(let j=i+1;j<nodes.length;j++){const b=nodes[j];const d=Math.hypot(a.x-b.x,a.y-b.y);if(d<R){
+      const near=Math.max(0,1-Math.hypot((a.x+b.x)/2-mx,(a.y+b.y)/2-my)/260);
+      ctx.strokeStyle=rgba(a.t?col.b:col.a,(1-d/R)*(.16+.22*near+.12*pulse)*k);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke()}}}
+    for(const n of nodes){
+      const tw=.55+.45*Math.sin(t/900+n.ph);const near=Math.max(0,1-Math.hypot(n.x-mx,n.y-my)/220);
+      const cc=n.t?col.b:col.a;
+      ctx.fillStyle=rgba(cc,(.10+.14*near+.10*pulse)*k*tw);ctx.beginPath();ctx.arc(n.x,n.y,n.r*5,0,6.283);ctx.fill();
+      ctx.fillStyle=rgba(cc,(.45+.4*near+.2*pulse)*k*(.6+.4*tw));ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,6.283);ctx.fill();
+    }
+    // כיוון הצללים: הפוך למקור האור
+    if(t-last>120){last=t;const sx=((.5-P.x)*22).toFixed(0)+'px',sy=(8+(.5-P.y)*18).toFixed(0)+'px';
+      if(sx!==lsx||sy!==lsy){lsx=sx;lsy=sy;const r=document.documentElement.style;r.setProperty('--sx',sx);r.setProperty('--sy',sy)}}
+  }
+  // תנועה עדינה לא צריכה 60 פריימים: מספיק כ־30, וזה חוסך סוללה
+  function loop(t){if(t-prev>=32){prev=t;draw(t)}raf=mode==='off'?0:requestAnimationFrame(loop)}
+  function start(){cancelAnimationFrame(raf);raf=0;if(mode==='off'){draw(performance.now())}else raf=requestAnimationFrame(loop)}
+  addEventListener('resize',()=>{resize();if(mode==='off')draw(performance.now())});
+  addEventListener('pointermove',e=>{P.active=true;P.tx=e.clientX/W;P.ty=e.clientY/H},{passive:true});
+  document.addEventListener('pointerleave',()=>{P.active=false});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(raf);raf=0}else start()});
+  new MutationObserver(()=>{readColors();if(mode==='off')draw(performance.now())}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme','data-palette']});
+  resize();
+  window.__fx={mode(m){mode=m;start()}};
+  mode=motionMode();start();
+}
+
 function initTheme(){
   let t=null;try{t=localStorage.getItem('consultingTheme')}catch{}
   if(t!=='light'&&t!=='dark')t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';
@@ -1236,6 +1323,8 @@ function bindModelContext(){
 let data=load();
 initTheme();
 initPalette();
+initMotion();
+initFx();
 ensureAllAnalysis();
 bindImport();
 bindPalette();
