@@ -1006,6 +1006,9 @@ function bind(){
 // הטיה תלת־ממדית עדינה לכרטיסי עקרונות, לפי מיקום הסמן
 function bindTilt(){
   if(!window.matchMedia||matchMedia('(prefers-reduced-motion: reduce)').matches||!matchMedia('(hover: hover)').matches)return;
+  qsa('.stat-strip a').forEach(c=>{
+    c.onpointermove=e=>{const r=c.getBoundingClientRect();c.style.setProperty('--mx',((e.clientX-r.left)/r.width*100)+'%');c.style.setProperty('--my',((e.clientY-r.top)/r.height*100)+'%')};
+  });
   qsa('.principle-card').forEach(c=>{
     c.onpointermove=e=>{
       const r=c.getBoundingClientRect();
@@ -1164,6 +1167,26 @@ function applyTheme(t){
   const l=document.querySelector('#theme-toggle .theme-label');
   if(l)l.textContent=t==='dark'?'מצב בהיר':'מצב כהה';
 }
+const PALETTES=[
+  {k:'petrol',n:'טורקיז',g:'linear-gradient(135deg,#12806F,#2E4596)'},
+  {k:'neon',n:'ניאון',g:'linear-gradient(135deg,#FF2E97,#9D4EDD 55%,#FF8A00)'},
+  {k:'ocean',n:'אוקיינוס',g:'linear-gradient(135deg,#1E6FD9,#0891B2)'},
+  {k:'sunset',n:'שקיעה',g:'linear-gradient(135deg,#E0536B,#D98A2B)'},
+  {k:'forest',n:'יער',g:'linear-gradient(135deg,#3E8E4C,#A08A2E)'}
+];
+function applyPalette(k){
+  if(!PALETTES.some(p=>p.k===k))k='petrol';
+  if(k==='petrol')delete document.documentElement.dataset.palette;else document.documentElement.dataset.palette=k;
+  try{localStorage.setItem('consultingPalette',k)}catch{}
+  qsa('.swatch').forEach(b=>b.setAttribute('aria-checked',String(b.dataset.palette===k)));
+}
+function initPalette(){
+  const box=el('palette-picker');if(!box)return;
+  let k='petrol';try{k=localStorage.getItem('consultingPalette')||'petrol'}catch{}
+  box.innerHTML=`<p id="palette-label">פלטת צבעים</p><div class="swatches" role="radiogroup" aria-labelledby="palette-label">${PALETTES.map(p=>`<button class="swatch" type="button" role="radio" aria-checked="false" aria-label="${p.n}" title="${p.n}" data-palette="${p.k}" style="--sw:${p.g}"></button>`).join('')}</div>`;
+  qsa('.swatch').forEach(b=>b.onclick=()=>{applyPalette(b.dataset.palette);toast('פלטה: '+b.getAttribute('aria-label'))});
+  applyPalette(k);
+}
 function initTheme(){
   let t=null;try{t=localStorage.getItem('consultingTheme')}catch{}
   if(t!=='light'&&t!=='dark')t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';
@@ -1212,6 +1235,7 @@ function bindModelContext(){
 /* ---------- init ---------- */
 let data=load();
 initTheme();
+initPalette();
 ensureAllAnalysis();
 bindImport();
 bindPalette();

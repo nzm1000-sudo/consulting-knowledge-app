@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;600;700&family=Rubik:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
-  <script>try{var t=localStorage.getItem('consultingTheme');if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t}catch(e){}</script>
+  <script>try{var t=localStorage.getItem('consultingTheme');if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t;var p=localStorage.getItem('consultingPalette');if(p&&p!=='petrol')document.documentElement.dataset.palette=p}catch(e){}</script>
 </head>
 <body>
   <a class="skip-link" href="#view">דילוג לתוכן</a>
@@ -29,6 +29,7 @@
       <nav id="desktop-nav" aria-label="מסכים"></nav>
 
       <div class="sidebar-foot">
+        <div class="palette-picker" id="palette-picker"></div>
         <button id="theme-toggle" class="foot-btn" type="button"><span class="theme-ic" aria-hidden="true">◐</span><span class="theme-label">מצב כהה</span></button>
         <button id="export-btn" class="foot-btn" type="button"><span aria-hidden="true">⤓</span><span>שמירת גיבוי</span></button>
         <label class="foot-btn" for="restore-input" style="cursor:pointer"><span aria-hidden="true">⤒</span><span>שחזור מגיבוי</span></label>
