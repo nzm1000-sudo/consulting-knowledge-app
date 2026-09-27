@@ -66,6 +66,10 @@
             <span class="sf-label">חיפוש אדם, בעיה, עצה…</span>
             <kbd class="sf-kbd" aria-hidden="true">Ctrl K</kbd>
           </button>
+          <button id="ask-btn" class="ask-btn" type="button" aria-label="שאל את המוח השני">
+            <svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.6 12 8l5.4 2L12 12l-2 5.4L8 12 2.6 10 8 8z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            <span class="ask-btn-label">שאל את המוח השני</span>
+          </button>
           <button class="icon-btn primary" id="new-transcript" type="button" aria-label="הקלטה חדשה" title="הקלטה חדשה">
             <svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           </button>
@@ -91,6 +95,18 @@
       <div class="palette-foot">
         <span><kbd>↑</kbd><kbd>↓</kbd> ניווט</span><span><kbd>Enter</kbd> פתיחה</span><span class="pf-privacy">החיפוש מתבצע במכשיר</span>
       </div>
+    </form>
+  </dialog>
+
+  <dialog id="ask-dialog" class="palette ask" aria-label="שאל את המוח השני">
+    <form id="ask-form">
+      <div class="palette-head">
+        <svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.6 12 8l5.4 2L12 12l-2 5.4L8 12 2.6 10 8 8z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        <input id="ask-input" name="q" type="text" placeholder="שאלה על היסטוריית הייעוץ" autocomplete="off" aria-label="שאלה">
+        <button class="button primary sm" type="submit">שאל</button>
+      </div>
+      <div id="ask-body" class="palette-results ask-body" aria-live="polite"></div>
+      <div class="palette-foot"><span>תשובות מראיות מתועדות בלבד</span><span class="pf-privacy">קריאה בלבד · במכשיר</span></div>
     </form>
   </dialog>
 

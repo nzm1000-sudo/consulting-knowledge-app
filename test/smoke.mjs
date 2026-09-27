@@ -155,7 +155,7 @@ assert(!app.validBackup({data:{meetings:[{}]}}),'garbage rejected');
 
 // 9. modelContext tools keep their names; search is side-effect free
 const tools=documentStub.modelContext.__tools.map(t=>t.name).sort();
-assert.deepEqual(tools,['create_follow_up','search_consulting_knowledge'],'tool names preserved');
+assert.deepEqual(tools,['ask_second_brain','create_follow_up','search_consulting_knowledge'],'tool names preserved + ask tool');
 const searchTool=documentStub.modelContext.__tools.find(t=>t.name==='search_consulting_knowledge');
 windowStub.location.hash='#people';
 const res=searchTool.execute({query:'דניאל'});
@@ -166,5 +166,75 @@ const n=app.data.followups.length;
 assert.equal(fuTool.execute({person:'דניאל',title:'בדיקת מעקב',due:'2026-10-01'}).status,'created');
 assert.equal(app.data.followups.length,n+1);
 assert.throws(()=>fuTool.execute({person:'x',title:'y',due:'bad'}),'tool validates due');
+
+
+// 10. Ask the second brain (tier 1, evidence only). Synthetic data.
+const ask=app.askSecondBrain;
+const segText=(mid,seg)=>app.data.meetings.find(m=>m.id===mid).analysis.segments[seg].text;
+const allVerbatim=a=>a.findings.every(f=>!f.ev||segText(f.ev.mid,f.ev.seg).includes(f.ev.quote));
+const known=new Set();
+for(const m of app.data.meetings){const an=m.analysis;for(const k of ['observations','reasoning','advice','outcomes','results','followups','contradictions'])for(const it of an[k])known.add(it.text);if(an.problem)known.add(an.problem.text);an.segments.forEach(x=>known.add(x.text))}
+for(const f of app.data.followups)known.add(f.title);
+for(const p of app.data.principles)known.add(p.title);
+const noInvention=a=>a.findings.every(f=>known.has(f.text)||(f.route&&f.route.startsWith('case/')));
+// intents
+assert.equal(app.detectIntent('מה אמרתי לו בפעם הקודמת?').k,'previous');
+assert.equal(app.detectIntent('למה המלצתי לו לעצור?').k,'why');
+assert.equal(app.detectIntent('מה עדיין פתוח?').k,'open');
+assert.equal(app.detectIntent('תכין אותי לפגישה עם דניאל').k,'briefing');
+assert.equal(app.detectIntent('איפה שיניתי את דעתי?').k,'changedMind');
+assert.equal(app.detectIntent('מצא מקרים דומים לריבים').k,'similar');
+// person scope from the name in the question, chronological evidence
+let a=ask('מה אמרתי לדניאל בפעם הקודמת?',{type:'global'});
+assert.deepEqual(a.scope,{type:'person',id:'דניאל'},'name in question narrows scope');
+assert(a.findings.some(f=>f.label==='עצה'&&f.ev.mid==='m4'),'previous = latest meeting m4');
+assert(a.findings.some(f=>f.label==='נימוק'&&f.text.startsWith('כי')),'reason attached');
+assert(allVerbatim(a)&&noInvention(a),'previous: verbatim, nothing invented');
+assert(/2 הקלטות של דניאל/.test(a.coverage.text),'coverage is dynamic and scoped');
+// what changed: earlier advice + reported result
+a=ask('מה השתנה מאז הפגישה הקודמת?',{type:'person',id:'דניאל'});
+assert(a.findings.some(f=>f.label==='העצה בפגישה הקודמת'&&f.ev.mid==='m2'));
+assert(a.findings.some(f=>f.label==='מה דווח מאז'&&f.text.includes('עבד בשתי')));
+assert(allVerbatim(a)&&noInvention(a));
+// why: missing reasoning is reported as unknown, not invented
+a=ask('למה המלצתי את זה?',{type:'recording',id:'m2'});
+assert(a.unknowns.some(u=>u.includes('לא נמצא נימוק')),'m2 has no explicit reason → unknown');
+// open items
+a=ask('מה עדיין פתוח?',{type:'global'});
+assert(a.findings.length===app.data.followups.filter(f=>!f.done).length,'all open followups');
+// briefing never adds advice that was not recorded
+a=ask('תכין אותי לפגישה עם דניאל',{type:'global'});
+assert(a.findings.length>=4&&noInvention(a)&&allVerbatim(a),'briefing from evidence only');
+assert(a.answer.some(p=>p.includes('לא מציעה עצות חדשות')));
+// advice changes shown as a progression
+a=ask('איפה שיניתי את דעתי?',{type:'global'});
+const prog=a.findings.filter(f=>f.label.startsWith('דניאל'));
+assert(prog.length===2&&prog[0].ev.date<prog[1].ev.date,'progression in date order');
+// pronoun without a person → asks to choose
+a=ask('מה אמרתי לו בפעם הקודמת?',{type:'global'});
+assert(a.needsScope&&a.related.length>0,'ambiguous pronoun → choose person');
+// consultant questions = candidate observations only
+a=ask('אילו שאלות אני נוהג לשאול?',{type:'global'});
+assert(a.findings.some(f=>f.text.includes('איך עבד כלל עשר הדקות')),'consultant question found');
+assert(a.unknowns.some(u=>u.includes('תצפיות מועמדות')),'single recording is not a method');
+// unsupported question → no invented answer
+a=ask('מה מחיר הזהב בלונדון?',{type:'global'});
+assert.equal(a.intent,'search');assert.equal(a.findings.length,0);
+assert(a.answer[0].includes('לא נמצאה ראיה'));
+// mixed Hebrew/English does not break
+a=ask('מה ה-advice האחרון של דניאל?',{type:'global'});
+assert.equal(a.scope.id,'דניאל');
+// verbatim enforcement: a quote that no longer matches its source is dropped
+const m4=app.data.meetings.find(m=>m.id==='m4');const keep=m4.analysis.segments[3].text;
+m4.analysis.segments[3].text='טקסט ששונה';
+a=ask('מה אמרתי לדניאל בפעם הקודמת?',{type:'global'});
+assert(a.unknowns.some(u=>u.includes('לא עברו אימות')),'tampered quote dropped');
+assert(allVerbatim(a));
+m4.analysis.segments[3].text=keep;
+// read-only tool does not navigate or modify
+const askTool=documentStub.modelContext.__tools.find(t=>t.name==='ask_second_brain');
+const snapshot=JSON.stringify(app.data);windowStub.location.hash='#advice';
+const tr=askTool.execute({question:'מה עדיין פתוח?'});
+assert(tr.findings.length>0&&windowStub.location.hash==='#advice'&&JSON.stringify(app.data)===snapshot,'ask tool is read-only');
 
 console.log('ALL SMOKE TESTS PASSED');

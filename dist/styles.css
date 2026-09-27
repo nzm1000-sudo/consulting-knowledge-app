@@ -892,3 +892,28 @@ html,body{overflow-x:clip}
 .logo .core{filter:drop-shadow(0 0 3px var(--glow))}
 @keyframes logo-ripple{0%{transform:scale(.18);opacity:.9}100%{transform:scale(1);opacity:0}}
 :root{--logo-ink:color-mix(in srgb,var(--ink) 78%,var(--accent))}
+
+/* ---------- ask the second brain (v4.0) ---------- */
+.ask-btn{display:flex;align-items:center;gap:7px;height:38px;padding:0 13px;border-radius:var(--r-s);border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line));background:linear-gradient(180deg,var(--glass-hi),var(--surface));color:var(--accent-ink);font-size:14px;font-weight:600;box-shadow:inset 0 1px 0 var(--hilite),var(--shadow-1);white-space:nowrap}
+.ask-btn:hover{border-color:var(--accent);box-shadow:inset 0 1px 0 var(--hilite),0 0 18px -6px var(--glow)}
+.palette.ask{width:min(760px,calc(100vw - 24px))}
+.ask-body{max-height:min(620px,70vh);padding:10px 16px 16px}
+.ask-scope{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--muted);padding:4px 0 8px}
+.ask-scope strong{color:var(--accent-ink)}
+.ask-intent{font-size:12px;color:var(--muted);margin:0 0 6px}
+.ask-answer p{margin:0 0 8px;font-size:15.5px;line-height:1.65}
+.ask-findings{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.ask-f{border:1px solid var(--line);border-radius:var(--r-s);padding:10px 12px;background:var(--surface-2)}
+.ask-f-label{font-size:12px;font-weight:700;color:var(--muted)}
+.ask-f-text{margin:3px 0 0;font-size:15px;line-height:1.6}
+.ask-f .why-q{font-size:15px;margin:6px 0 0;padding-inline-start:10px;border-inline-start:2px solid var(--ev-line)}
+.ask-src{font-size:12px;color:var(--muted)}
+.ask-note{font-size:12.5px;color:var(--muted);margin:6px 0 0}
+.tag-pat{background:var(--accent-2-soft);color:var(--accent-2)}
+.ask-unknowns{margin:0;padding-inline-start:18px;font-size:13.5px;color:var(--ink-2)}
+.ask-coverage{font-size:12.5px;color:var(--muted);margin:14px 0 0;padding-top:10px;border-top:1px solid var(--line-2)}
+.ask-card-list{display:grid;gap:4px}
+.ask-card-q{display:flex;align-items:center;gap:8px;width:100%;border:0;background:none;padding:7px 8px;border-radius:var(--r-s);text-align:start;font-size:13.5px;color:var(--ink)}
+.ask-card-q .ic{width:14px;height:14px;color:var(--accent)}
+.ask-card-q:hover{background:var(--accent-soft);color:var(--accent-ink)}
+@media (max-width:860px){.ask-btn{width:40px;padding:0;justify-content:center}.ask-btn-label{display:none}}
