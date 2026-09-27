@@ -11,8 +11,11 @@ const SEED = {
     {id:'m1',title:'שיחה על גבולות במשפחה',person:'משפחת לוי',date:'2026-09-08',summary:'הוגדרה שיחה משותפת להצבת גבול ברור מול המשפחה המורחבת.',transcript:'הקושי המרכזי הוא התערבות חוזרת של ההורים. המלצתי שהבעל והאישה ינסחו יחד גבול אחיד ויציגו אותו כעמדה משותפת.',plaud:'נושא: התערבות ההורים בחיי הזוג.\nהמלצה: לגבש עמדה משותפת לפני הצגת הגבול.\nמשימה: שיחה משותפת של בני הזוג לפני המפגש המשפחתי הבא.',tags:['גבולות','זוגיות']},
     {id:'m2',title:'פגישת מעקב · תקשורת בזמן קונפליקט',person:'דניאל',date:'2026-09-03',summary:'נבחר כלל של עצירה לעשר דקות לפני חזרה לשיחה טעונה.',transcript:'דניאל תיאר ויכוחים שמסלימים. המלצתי לעצור, להירגע ולחזור לשיחה בזמן מוסכם. בפגישה הבאה נבדוק אם הצליחו ליישם.',plaud:'נושא: ויכוחים שמסלימים בין בני הזוג.\nהמלצה: כלל עצירה של עשר דקות וחזרה בזמן מוסכם.\nמעקב: לבדוק יישום בפגישה הבאה.',tags:['תקשורת','ויסות']},
     {id:'m3',title:'התלבטות סביב שינוי מקצועי',person:'נועה',date:'2026-08-27',summary:'הוחלט לבדוק מעבר הדרגתי במקום החלטה חדה מתוך לחץ.',transcript:'נועה שוקלת לעזוב את העבודה. סיכמנו שתבצע שני ניסויים קטנים לפני החלטה ותתעד מה נותן לה אנרגיה.',plaud:'נושא: שקילת עזיבת מקום העבודה.\nהחלטה: שני ניסויים קטנים לפני החלטה.\nמשימה: יומן אנרגיה שבועי.',tags:['החלטות','קריירה']},
-    {id:'m4',title:'מעקב · איך עבד כלל עשר הדקות',person:'דניאל',date:'2026-09-17',summary:'הכלל עבד חלקית. נוסף ניסוח מפורש של זמן החזרה.',transcript:'[00:01] היועץ: איך עבד כלל עשר הדקות?\n[00:20] דניאל: עבד בשתי מריבות מתוך שלוש. בפעם השלישית אשתי הרגישה שאני בורח.\n[01:05] היועץ: המלצתי שלפני העצירה תאמר במפורש מתי תחזור, כי בלי זמן חזרה העצירה נשמעת כנטישה.\n[01:20] היועץ: בבית עם ילדים קטנים זה לא תמיד אפשרי, ואז עוצרים רק את הנושא ולא את השיחה.\n[01:40] היועץ: המטרה היא שהעצירה תיתפס ככלי משותף ולא כבריחה.\n[02:10] היועץ: בפגישה הבאה נבדוק אם הניסוח המפורש שינה את התגובה.',plaud:'נושא: תוצאות כלל עשר הדקות.\nתוצאה: הצליח בשתיים מתוך שלוש מריבות.\nהמלצה: לומר במפורש מתי חוזרים לשיחה.\nחריג: כשיש ילדים קטנים בבית עוצרים את הנושא ולא את השיחה.',tags:['תקשורת','ויסות']}
+    {id:'m4',title:'מעקב · איך עבד כלל עשר הדקות',person:'דניאל',date:'2026-09-17',summary:'הכלל עבד חלקית. נוסף ניסוח מפורש של זמן החזרה.',transcript:'[00:01] היועץ: איך עבד כלל עשר הדקות?\n[00:20] דניאל: עבד בשתי מריבות מתוך שלוש. בפעם השלישית אשתי הרגישה שאני בורח.\n[01:05] היועץ: המלצתי שלפני העצירה תאמר במפורש מתי תחזור, כי בלי זמן חזרה העצירה נשמעת כנטישה.\n[01:20] היועץ: בבית עם ילדים קטנים זה לא תמיד אפשרי, ואז עוצרים רק את הנושא ולא את השיחה.\n[01:40] היועץ: המטרה היא שהעצירה תיתפס ככלי משותף ולא כבריחה.\n[02:10] היועץ: בפגישה הבאה נבדוק אם הניסוח המפורש שינה את התגובה.',plaud:'נושא: תוצאות כלל עשר הדקות.\nתוצאה: הצליח בשתיים מתוך שלוש מריבות.\nהמלצה: לומר במפורש מתי חוזרים לשיחה.\nחריג: כשיש ילדים קטנים בבית עוצרים את הנושא ולא את השיחה.',tags:['תקשורת','ויסות']},
+    {id:'m5',title:'מעקב · תוצאות הניסויים',person:'נועה',date:'2026-09-12',summary:'הניסוי בהדרכה נתן אנרגיה. הוחלט להגדיל אותו ליום בשבוע.',transcript:'[00:02] היועץ: מה נתן לך הכי הרבה אנרגיה בשבועיים האחרונים?\n[00:25] נועה: הניסוי השני, ההדרכה. אבל אני עדיין חוששת לעזוב, יש לי משכנתא.\n[01:10] היועץ: אני לא שואל אם לעזוב, אני שואל מה את לומדת על עצמך מהניסויים.\n[01:40] נועה: הבנתי. זה לא החלטה אחת, זה כיוון.\n[02:05] היועץ: המלצתי שתגדילי את ההדרכה ליום בשבוע, כי כך בודקים את הכיוון בלי לסכן את המשכנתא.\n[02:40] היועץ: בפגישה הבאה נבדוק איך הרגיש היום הנוסף.',plaud:'נושא: תוצאות שני הניסויים.\nתובנה: ההדרכה נותנת אנרגיה.\nהמלצה: להגדיל את ההדרכה ליום בשבוע.\nמעקב: לבדוק איך הרגיש היום הנוסף.',tags:['קריירה','החלטות']},
+    {id:'m6',title:'מעקב · תגובת המשפחה',person:'משפחת לוי',date:'2026-09-22',summary:'המשפחה כיבדה את הגבול. אבי חושש שזה לא יחזיק.',transcript:'[00:03] היועץ: מה קרה כשהצגתם את הגבול?\n[00:20] רונית: אמא שלי נעלבה. אבל בסוף היא כיבדה את זה.\n[00:48] אבי: אני לא בטוח שזה יחזיק לאורך זמן.\n[01:15] היועץ: במקום לשאול אם זה יחזיק, תסתכלו על זה כעל אימון משותף שלכם.\n[01:50] אבי: אתה צודק, זה באמת חיזק אותנו כזוג.\n[02:20] היועץ: המלצתי שתמשיכו להציג כל החלטה משפחתית יחד, כי החזית המשותפת היא מה שעבד.\n[02:45] היועץ: בפגישה הבאה נחזור לזה ונבדוק את החגים.',plaud:'נושא: תגובת המשפחה לגבול.\nתוצאה: האם נעלבה אך כיבדה את הגבול.\nהמלצה: להמשיך להציג החלטות יחד.\nמעקב: החגים.',tags:['גבולות','זוגיות']}
   ],
+  seedVersion:2,
   people:[{name:'משפחת לוי',topic:'גבולות משפחתיים'},{name:'דניאל',topic:'תקשורת זוגית'},{name:'נועה',topic:'שינוי מקצועי'}],
   principles:[
     {title:'חזית זוגית משותפת לפני הצבת גבול',description:'מגבשים עמדה בין בני הזוג ורק אז מציגים אותה למשפחה המורחבת.'},
@@ -22,14 +25,16 @@ const SEED = {
   // תיק (case) הוא ישות נפרדת: בעיה או נושא מתמשך. אדם יכול להיות בכמה תיקים, תיק יכול לכלול כמה אנשים וכמה הקלטות, והקלטה יכולה להשתייך לכמה תיקים.
   cases:[
     {id:'c1',title:'תקשורת בזמן קונפליקט',status:'open',people:['דניאל'],recordingIds:['m2','m4'],tags:['תקשורת','ויסות']},
-    {id:'c2',title:'גבולות מול המשפחה המורחבת',status:'open',people:['משפחת לוי'],recordingIds:['m1'],tags:['גבולות','משפחה']},
-    {id:'c3',title:'שינוי מקצועי',status:'open',people:['נועה'],recordingIds:['m3'],tags:['קריירה','החלטות']}
+    {id:'c2',title:'גבולות מול המשפחה המורחבת',status:'open',people:['משפחת לוי'],recordingIds:['m1','m6'],tags:['גבולות','משפחה']},
+    {id:'c3',title:'שינוי מקצועי',status:'open',people:['נועה'],recordingIds:['m3','m5'],tags:['קריירה','החלטות']}
   ],
   followups:[
     {id:'f1',person:'דניאל',title:'לבדוק איך עבד כלל עשר הדקות',due:'2026-09-14',done:true,meetingId:'m2'},
     {id:'f2',person:'משפחת לוי',title:'מה הייתה תגובת המשפחה לגבול החדש?',due:'2026-09-16',done:false,meetingId:'m1'},
     {id:'f3',person:'נועה',title:'לעבור על תוצאות שני הניסויים',due:'2026-09-20',done:false,meetingId:'m3'},
-    {id:'f4',person:'דניאל',title:'האם הניסוח המפורש של זמן החזרה שינה את התגובה?',due:'2026-10-01',done:false,meetingId:'m4'}
+    {id:'f4',person:'דניאל',title:'האם הניסוח המפורש של זמן החזרה שינה את התגובה?',due:'2026-10-01',done:false,meetingId:'m4'},
+    {id:'f5',person:'נועה',title:'בפגישה הבאה נבדוק איך הרגיש היום הנוסף.',due:'2026-09-19',done:false,meetingId:'m5'},
+    {id:'f6',person:'משפחת לוי',title:'בפגישה הבאה נחזור לזה ונבדוק את החגים.',due:'2026-09-29',done:false,meetingId:'m6'}
   ]
 };
 
@@ -131,14 +136,14 @@ let pendingJump=null;
 function persistNav(){ssSet('consultingNav',navState)}
 
 /* ---------- ניתוח מקומי (כללים, פונקציה טהורה) ---------- */
-const ANALYSIS_VERSION=3;
+const ANALYSIS_VERSION=5;
 const ENGINE_LABEL='כללים מקומיים';
 const H={
   contradiction:/(שונה מכלל|חריג|לעומת זאת|לא תמיד|בתנאים מסוימים|יוצא מן הכלל)/,
   advice:/(המלצתי|המלצנו|הצעתי|אני מציע(ה)?|אני ממליץ(ה)?|מומלץ|כדאי|מוטב|צריך(ה)? (ש|ל)|נראה לי (שת|שכדאי))/,
   decision:/(הוחלט|החלטנו|סיכמנו|הסכמנו)/,
   followup:/(בפגישה הבאה|בפגישה העתידה|נבדוק|לבדוק|מעקב|נחזור (על|ל)?זה|נחזור לזה)/,
-  result:/(^|[\s,])(עבד|עבדה|עבדו|הצליח|הצליחה|הצליחו|לא הצליח|השתפר|השתפרה|השתפרו|יישם|יישמה|יישמו|עזר|עזרה|לא עזר)(?=[\s.,!?]|$)/,
+  result:/(^|[\s,])(עבד|עבדה|עבדו|הצליח|הצליחה|הצליחו|לא הצליח|השתפר|השתפרה|השתפרו|יישם|יישמה|יישמו|עזר|עזרה|לא עזר|כיבד|כיבדה|כיבדו|חיזק|חיזקה)(?=[\s.,!?]|$)/,
   outcome:/(המטרה|התוצאה (הצפויה|הרצויה)|מצפ(ה|ים) ש|הציפייה)/,
   rationale:/(מכיוון|בגלל|הסיבה|שכן|כדי ש|על מנת|הנימוק)/,
   problem:/(הקושי|הבעיה|מתקש|ויכוח|מריב|קונפליקט|מסלימ|פחד|חושש|שוקל|מתלבט|נתקע|סובל|לחץ)/,
@@ -160,6 +165,45 @@ function splitSegments(transcript){
     const sents=rest.split(/(?<=[.!?…])\s+/).map(s=>s.trim()).filter(Boolean);
     for(const s of sents)out.push({speaker,time,text:s});
   }
+  return out;
+}
+/* ---------- שכבת מתודולוגיה (כללים, מועמדת) ----------
+   מזהה מהלכי ייעוץ רק בהקלטות שבהן מסומנים דוברים. כל סיווג הוא הסקה (inferred),
+   והטקסט הוא המשפט המקורי. שכבת חילוץ מהשרת יכולה להחליף או להשלים את המערך הזה. */
+const METHOD_VERSION='rules-m1';
+const CONSULTANT_RE=/(יועץ|הרב)/;
+const METHOD={
+  question:{label:'שאלה של היועץ',actor:'consultant'},
+  reframe:{label:'מסגור מחדש',actor:'consultant',re:/(לא .{1,40}(,? אני שואל|אלא)|במקום ל|תסתכל(י|ו)? על זה|תחשוב(י|ו)? על זה כ|בעצם זה)/},
+  rationale:{label:'עצה עם נימוק',actor:'consultant'},
+  adaptation:{label:'התאמה לנסיבות',actor:'consultant'},
+  followup_plan:{label:'קביעת בדיקה בהמשך',actor:'consultant'},
+  client_resistance:{label:'התנגדות או היסוס של הפונה',actor:'client',re:/(אבל אני|אני לא בטוח|לא בטוחה|לא מסכים|לא מסכימה|זה לא יעבוד|קשה לי|חושש|חוששת)/},
+  client_turning_point:{label:'נקודת מפנה אצל הפונה',actor:'client',re:/(^הבנתי|אני מבין|אני מבינה|עכשיו ברור|אתה צודק|את צודקת|זה נכון)/}
+};
+function detectMethodology(segments,items){
+  const out=[],isC=s=>!!s.speaker&&CONSULTANT_RE.test(s.speaker),isClient=s=>!!s.speaker&&!CONSULTANT_RE.test(s.speaker);
+  if(!segments.some(isC))return out; // בלי דובר מסומן אי אפשר לדעת מי אמר מה
+  // סוג המשפט לפי הסיווג הראשי שלו. נימוק שחולץ מתוך משפט עצה מצביע על אותו משפט, ולכן לא נכנס למפה.
+  const typeAt=new Map(items.filter(it=>!it.forAdvice).map(it=>[it.evidence.seg,it.type]));
+  const add=(sub,i,conf,extra={})=>out.push({id:'method-'+sub+'-'+i,type:'methodology',subtype:sub,actor:METHOD[sub].actor,text:segments[i].text,kind:'inferred',confidence:conf,source:METHOD_VERSION,evidence:{quote:segments[i].text,time:segments[i].time,speaker:segments[i].speaker,seg:i},...extra});
+  const nextOf=(i,pred)=>{for(let j=i+1;j<Math.min(segments.length,i+4);j++)if(pred(segments[j]))return j;return -1};
+  const prevOf=(i,pred)=>{for(let j=i-1;j>=Math.max(0,i-3);j--)if(pred(segments[j]))return j;return -1};
+  segments.forEach((sg,i)=>{
+    if(isC(sg)){
+      const t=sg.text,ty=typeAt.get(i);
+      if(/\?\s*$/.test(t))add('question',i,62);
+      else if(METHOD.reframe.re.test(t))add('reframe',i,58);
+      else if((ty==='advice'||ty==='decision')&&/[\s,](כי|מכיוון ש|בגלל ש|כדי ש|על מנת ל)\s/.test(t))add('rationale',i,70);
+      else if(ty==='contradiction')add('adaptation',i,56);
+      else if(ty==='followup')add('followup_plan',i,68);
+      else return;
+      const r=nextOf(i,isClient);if(r>=0)out[out.length-1].response={seg:r};
+    }else if(isClient(sg)){
+      if(METHOD.client_turning_point.re.test(sg.text)){add('client_turning_point',i,58);const b=prevOf(i,isC);if(b>=0)out[out.length-1].before={seg:b}}
+      else if(METHOD.client_resistance.re.test(sg.text)){add('client_resistance',i,56);const r=nextOf(i,isC);if(r>=0)out[out.length-1].response={seg:r}}
+    }
+  });
   return out;
 }
 function analyzeTranscript(text){
@@ -208,6 +252,7 @@ function analyzeTranscript(text){
     results:by('result'),
     followups:by('followup'),
     contradictions:by('contradiction'),
+    methodology:detectMethodology(segments,items),
     wordCount:String(text||'').trim().split(/\s+/).filter(Boolean).length,
     timeRange:times.length>=2?times[0]+'–'+times[times.length-1]:null,
     summary:(by('decision').concat(by('advice'))[0]||problems[0]||segments[0])?.text||''
@@ -225,6 +270,14 @@ function ensureAllAnalysis(){
     const ids=new Set(data.meetings.map(m=>m.id));
     data.cases=structuredClone(SEED.cases).map(c=>({...c,recordingIds:c.recordingIds.filter(id=>ids.has(id))})).filter(c=>c.recordingIds.length);
     changed=true;
+  }
+  // נתוני דוגמה מגרסה קודמת: מוסיפים את הקלטות הדוגמה החדשות. נוגע רק במאגר שמכיל את הדוגמה המקורית.
+  if((data.seedVersion||1)<SEED.seedVersion&&data.meetings.some(m=>m.id==='m1'&&m.person==='משפחת לוי')){
+    const have=new Set(data.meetings.map(m=>m.id));
+    for(const m of SEED.meetings)if(!have.has(m.id)){const c=structuredClone(m);c.analysis=analyzeTranscript(c.transcript);data.meetings.push(c)}
+    const fh=new Set(data.followups.map(f=>f.id));for(const f of SEED.followups)if(!fh.has(f.id))data.followups.push(structuredClone(f));
+    for(const sc of SEED.cases){const c=allCases().find(x=>x.id===sc.id);if(c)for(const id of sc.recordingIds)if(!c.recordingIds.includes(id)&&data.meetings.some(m=>m.id===id))c.recordingIds.push(id)}
+    data.seedVersion=SEED.seedVersion;changed=true;
   }
   if(changed)save();
 }
@@ -423,7 +476,7 @@ function whyHtml(it,mid){
 function itemHtml(it,mid){
   return`<div class="kitem ${it.kind}">
     <p class="kitem-text">${esc(it.text)}</p>
-    <div class="kitem-foot">${kindTag(it.kind)}${confHtml(it.confidence)}
+    <div class="kitem-foot">${it.subtype&&METHOD[it.subtype]?`<span class="tag tag-pat">${METHOD[it.subtype].label}</span>`:''}${kindTag(it.kind)}${confHtml(it.confidence)}
       ${it.evidence?`<button class="link-btn why-btn" type="button" aria-expanded="false" data-why="why-${esc(mid)}-${esc(it.id)}">${ic('quote')}למה?</button>`:''}
     </div>
     ${whyHtml(it,mid)}
@@ -638,6 +691,7 @@ function weatherCard(){
    ============================================================ */
 const INTENTS=[
   {k:'briefing',label:'הכנה לפגישה',re:/(תכין|הכנה|להתכונן|לפני הפגישה|לפני שאני מדבר|עוד מעט מדבר|מה חשוב שאזכור|מה חשוב לדעת|מה באמת חשוב|תזכיר לי|תדריך)/},
+  {k:'method',label:'שיטת הייעוץ',re:/(איך אני (בדרך כלל |נוהג |נוטה )?(מייעץ|עובד|מגיב|פותח|מוביל|מנסח|מנמק|עושה מסגור|מתמודד)|מה אני (עושה|עונה) כש|שיטת הייעוץ|השיטה שלי|מהלכי ייעוץ|מהלכים|טכניק|דפוסי ייעוץ|התנגד|נקודת מפנה|נקודות מפנה|מסגור מחדש|הניסוח שלי|משנה כיוון|באמצע השיחה)/},
   {k:'changedMind',label:'שינויים וסתירות בעצות',re:/(שיניתי את|שיניתי|שינית|סותר|סתירה|סתירות|משהו אחר|אמרתי אחרת)/},
   {k:'firstSeen',label:'מתי נושא הופיע לראשונה',re:/(מתי .{0,25}התחיל|מתי .{0,25}הופיע|מתי לראשונה|הופיע לראשונה|מאיזה שלב)/},
   {k:'unresolved',label:'מה נסגר ומה פתוח',re:/(מה נסגר|נסגר ומה|לא בוצע|לא ביצע|טרם בוצע|מה עדיין לא|עוד לא ביצע)/},
@@ -769,6 +823,48 @@ function adviceOutcomes(ms){
     }
   }
   return out;
+}
+
+/* ---------- גילוי שיטה על פני הקלטות ----------
+   מהלך שהופיע בהקלטה אחת הוא תצפית מועמדת. „חוזר” דורש לפחות 2 הקלטות של 2 אנשים שונים.
+   „מבוסס” דורש לפחות 5 הקלטות של 3 אנשים. הכול מחושב מחדש בכל שאלה, ולכן משתנה כשנוספות הקלטות. */
+function methodStatus(rec,people){return rec>=5&&people>=3?'מבוסס':rec>=2&&people>=2?'חוזר':rec>=2?'חוזר אצל אדם אחד':'תצפית מועמדת'}
+function methodPatterns(ms){
+  const by=new Map();
+  for(const m of ms)for(const it of m.analysis?.methodology||[]){if(!by.has(it.subtype))by.set(it.subtype,[]);by.get(it.subtype).push({m,it})}
+  const pats=[...by.entries()].map(([sub,occ])=>{
+    occ.sort((a,b)=>a.m.date.localeCompare(b.m.date));
+    const rec=new Set(occ.map(o=>o.m.id)).size,people=new Set(occ.map(o=>o.m.person)).size;
+    return{subtype:sub,label:METHOD[sub]?.label||sub,actor:METHOD[sub]?.actor,occ,recordings:rec,people,status:methodStatus(rec,people),
+      first:occ[0].m.date,last:occ[occ.length-1].m.date,tags:[...new Set(occ.flatMap(o=>o.m.tags||[]))]};
+  }).sort((a,b)=>b.recordings-a.recordings||b.people-a.people||b.occ.length-a.occ.length);
+  // רצפים: מהלך ואחריו מהלך אחר, בתוך שלושה משפטים
+  const seq=new Map();
+  for(const m of ms){const arr=[...(m.analysis?.methodology||[])].sort((a,b)=>a.evidence.seg-b.evidence.seg);
+    for(let i=0;i<arr.length-1;i++){const a=arr[i],b=arr[i+1];if(b.evidence.seg-a.evidence.seg>3||a.subtype===b.subtype)continue;
+      const k=a.subtype+'>'+b.subtype;if(!seq.has(k))seq.set(k,{from:a.subtype,to:b.subtype,occ:[]});seq.get(k).occ.push({m,a,b})}}
+  const sequences=[...seq.values()].map(x=>({...x,recordings:new Set(x.occ.map(o=>o.m.id)).size,people:new Set(x.occ.map(o=>o.m.person)).size}))
+    .map(x=>({...x,status:methodStatus(x.recordings,x.people)})).sort((a,b)=>b.recordings-a.recordings);
+  return{patterns:pats,sequences};
+}
+function methodCoverage(ms){
+  const spk=ms.filter(m=>(m.analysis?.speakers||[]).length).length,meth=ms.filter(m=>(m.analysis?.methodology||[]).length).length;
+  return{withSpeakers:spk,withMethod:meth,total:ms.length,text:`שכבת המתודולוגיה: ${meth} מתוך ${ms.length} הקלטות עובדו. רק ב־${spk} מהן מסומנים דוברים, ורק בהן אפשר לדעת מי אמר מה. הזיהוי הוא לפי כללים (${METHOD_VERSION}), ולכן כל סיווג הוא הסקה.`};
+}
+function segFinding(m,i,label,section){
+  const sg=m.analysis.segments[i];
+  return{label,text:sg.text,kind:'explicit',confidence:null,section,ev:{mid:m.id,itemId:'seg-'+i,seg:i,quote:sg.text,time:sg.time||null,speaker:sg.speaker||null,date:m.date,person:m.person,title:m.title,version:m.analysis.version,kind:'explicit'}};
+}
+function methodFocus(q){
+  q=String(q||'');
+  if(/(התנגד|לא מקבל|לא מסכים|כשאדם לא)/.test(q))return'client_resistance';
+  if(/(נקודת מפנה|נקודות מפנה|מה קורה לפני|לפני שהאדם הבין|ההבנה)/.test(q))return'client_turning_point';
+  if(/(מסגור|ממסגר|מסתכל אחרת|מסגרת)/.test(q))return'reframe';
+  if(/(שאלות|שואל)/.test(q))return'question';
+  if(/(מנמק|מסביר את העצה|נימוק לצד|עם נימוק)/.test(q))return'rationale';
+  if(/(משנה כיוון|לשנות כיוון|מתאים את|התאמה|חריג לנסיבות|לנסיבות)/.test(q))return'adaptation';
+  if(/(בדיקה בהמשך|קובע מעקב|קביעת מעקב)/.test(q))return'followup_plan';
+  return null;
 }
 
 /* ---------- חבילת ראיות וחוזה סינתזה ----------
@@ -1028,7 +1124,53 @@ function askSecondBrain(question,scope){
       }
       ans.answer.push(rows.length?`${rows.length} עקרונות מועמדים מקושרים להקלטות בהיקף. הקישור הוא לפי חפיפת מילים, ולכן הוא השערה.`:'לא נמצא עיקרון שמקושר להקלטות בהיקף הזה.');
     },
-    questions(){
+    method(){
+      const cov=methodCoverage(ms);ans.coverage.methodology=cov.withMethod;ans.coverage.text+=' '+cov.text;
+      const {patterns,sequences}=methodPatterns(ms);
+      const focus=intent.k==='questions'?'question':methodFocus(q);
+      const rule='מהלך שהופיע בהקלטה אחת הוא תצפית מועמדת. „חוזר” פירושו לפחות 2 הקלטות של 2 אנשים שונים. „מבוסס” דורש לפחות 5 הקלטות של 3 אנשים.';
+      if(!patterns.length){ans.answer.push('לא זוהו מהלכי ייעוץ בהיקף הזה.');if(cov.withSpeakers<cov.total)ans.unknowns.push(cov.withSpeakers?`${cov.total-cov.withSpeakers} הקלטות בהיקף בלי דוברים מסומנים לא נבדקו.`:'בהיקף הזה אין דוברים מסומנים, ולכן אי אפשר לדעת מי אמר מה.');ans.unknowns.push(rule);return}
+      const example=(o,label,sec)=>ans.findings.push({...finding(o.m,o.it,label),section:sec});
+      const byPersonWording=/(ניסוח|מנסח|לפי סוג האדם|לפי האדם)/.test(q);
+      if(focus){
+        const p=patterns.find(x=>x.subtype===focus);
+        if(!p){ans.answer.push(`לא זוהה „${METHOD[focus].label}” בהיקף הזה.`);ans.unknowns.push(rule);return}
+        ans.answer.push(`${p.label}: ${cnt(p.occ.length,'הופעה אחת','הופעות')} ב־${cnt(p.recordings,'הקלטה אחת','הקלטות')} של ${cnt(p.people,'אדם אחד','אנשים')}. סטטוס: ${p.status}. נצפה מ־${formatDate(p.first)} עד ${formatDate(p.last)}${p.tags.length?'. הקשרים: '+p.tags.join(', '):''}.`);
+        for(const o of p.occ){
+          const sec=o.m.person+' · '+formatDate(o.m.date);
+          example(o,p.label,sec);
+          if(o.it.before){const b=(o.m.analysis.methodology||[]).find(x=>x.evidence.seg===o.it.before.seg);ans.findings.push(segFinding(o.m,o.it.before.seg,'מה אמר היועץ רגע לפני'+(b?' ('+METHOD[b.subtype].label+')':''),sec))}
+          if(o.it.response){const r=(o.m.analysis.methodology||[]).find(x=>x.evidence.seg===o.it.response.seg);ans.findings.push(segFinding(o.m,o.it.response.seg,(p.actor==='client'?'מה עשה היועץ מיד אחרי':'תגובת הפונה')+(r?' ('+METHOD[r.subtype].label+')':''),sec))}
+          for(const c of o.m.analysis?.contradictions||[])if(c.evidence.seg!==o.it.evidence.seg)ans.findings.push({...finding(o.m,c,'חריג באותה הקלטה'),section:sec});
+        }
+        if(p.actor==='client'){
+          const key=focus==='client_resistance'?'response':'before';
+          const moves=p.occ.map(o=>o.it[key]&&(o.m.analysis.methodology||[]).find(x=>x.evidence.seg===o.it[key].seg)).filter(Boolean);
+          const cnts=new Map();for(const mv of moves)cnts.set(mv.subtype,(cnts.get(mv.subtype)||0)+1);
+          if(cnts.size)ans.answer.push((focus==='client_resistance'?'מה היועץ עשה אחרי ההתנגדות: ':'מה קדם לנקודת המפנה: ')+[...cnts.entries()].map(([k,n])=>METHOD[k].label+' ('+n+')').join(', ')+'.');
+        }
+        const outs=adviceOutcomes(ms).filter(x=>p.occ.some(o=>o.m.id===x.m.id)&&x.status==='reported');
+        for(const x of outs)for(const r of x.results)ans.findings.push({...finding(r.m,r.it,'דווח בפגישה מאוחרת'),section:'תוצאות שדווחו אחרי הקלטות עם המהלך'});
+        if(p.status==='תצפית מועמדת')ans.unknowns.push('המהלך הופיע בהקלטה אחת בלבד, ולכן אי אפשר לקבוע שזו שיטה.');
+      }else{
+        ans.answer.push(`זוהו ${cnt(patterns.length,'סוג מהלך אחד','סוגי מהלכים')}. כל סוג מוצג עם מספר ההקלטות והאנשים, ודוגמאות מהתמלול.`);
+        for(const p of patterns){
+          const sec=p.label;
+          ans.findings.push({section:sec,label:`${p.recordings} הקלטות · ${cnt(p.people,'אדם אחד','אנשים')} · ${p.status} · ${formatDate(p.first)}–${formatDate(p.last)}`,text:p.actor==='client'?'אירוע אצל הפונה':'מהלך של היועץ',kind:'pattern',ev:null});
+          const shown=byPersonWording?[...new Map(p.occ.map(o=>[o.m.person,o])).values()]:p.occ.slice(0,2);
+          for(const o of shown)example(o,o.m.person+' · '+formatDate(o.m.date),sec);
+        }
+        const rs=sequences.filter(x=>x.recordings>=2);
+        for(const x of rs){const sec='רצף: '+METHOD[x.from].label+' ← '+METHOD[x.to].label;
+          ans.findings.push({section:sec,label:`${x.recordings} הקלטות · ${cnt(x.people,'אדם אחד','אנשים')} · ${x.status}`,text:'אחרי „'+METHOD[x.from].label+'” בא „'+METHOD[x.to].label+'”',kind:'pattern',ev:null});
+          for(const o of x.occ.slice(0,2)){ans.findings.push({...finding(o.m,o.a,o.m.person+' · '+formatDate(o.m.date)),section:sec});ans.findings.push({...finding(o.m,o.b,'ואחריו'),section:sec})}}
+        if(rs.length)ans.answer.push(`${cnt(rs.length,'רצף אחד חוזר','רצפים חוזרים')} של שני מהלכים.`);
+      }
+      ans.unknowns.push(rule);
+      if(cov.withSpeakers<cov.total)ans.unknowns.push(`${cov.total-cov.withSpeakers} הקלטות בהיקף בלי דוברים מסומנים לא נבדקו בשכבה הזו.`);
+    },
+    questions(){H.method()},
+    _oldQuestions(){
       let n=0;const recs=new Set();
       for(const m of chrono){const segs=m.analysis?.segments||[];segs.forEach((s,i)=>{if(s.speaker&&s.speaker!==m.person&&/\?\s*$/.test(s.text)){n++;recs.add(m.id);ans.findings.push({label:m.person+' · '+formatDate(m.date)+(s.time?' · '+s.time:''),text:s.text,kind:'explicit',confidence:null,ev:{mid:m.id,seg:i,quote:s.text,time:s.time,speaker:s.speaker,date:m.date,person:m.person,title:m.title,version:m.analysis?.version,kind:'explicit'}})}})}
       const withSpk=chrono.filter(m=>(m.analysis?.speakers||[]).length).length;
@@ -1077,10 +1219,11 @@ function askSecondBrain(question,scope){
 }
 const ASK_SUGGEST={
   person:['מה אמרתי לו בפעם הקודמת?','מה עדיין פתוח?','אילו עצות כבר נתתי?','מה השתנה?','למה המלצתי את זה?','תכין אותי לפגישה הבאה','איך זה התפתח לאורך הזמן?','מה חוזר אצלו?','האם העצות שלי עבדו?','מה נסגר ומה עדיין פתוח?'],
-  recording:['מה היו הבעיות?','מה המלצתי?','למה המלצתי את זה?','מה דורש מעקב?','אילו חריגים נאמרו?','מצא מקרים דומים'],
+  recording:['אילו מהלכי ייעוץ התרחשו כאן?','מה היו הבעיות?','מה המלצתי?','למה המלצתי את זה?','מה דורש מעקב?','אילו חריגים נאמרו?','מצא מקרים דומים'],
   case:['איך המקרה התפתח?','מה כבר ניסינו?','האם העצות עבדו?','מה נסגר ומה עדיין פתוח?','תכין אותי לפגישה הבאה','איפה שיניתי את דעתי?'],
   advice:['למה המלצתי את זה?','מה קרה אחרי העצה הזו?','איך העצה התפתחה?','איפה שיניתי את דעתי?','מצא מקרים דומים'],
-  global:['מה חוזר הכי הרבה בייעוצים?','מה השתנה בחודש האחרון?','האם העצות שלי עבדו?','מצא מקרים דומים לריבים בזוגיות','אילו עקרונות חוזרים אצלי?','אילו חריגים קיימים?','איפה שיניתי את דעתי?','אילו שאלות אני נוהג לשאול?','מה עדיין פתוח?']
+  method:['איך אני בדרך כלל מגיב להתנגדות?','מה קורה לפני נקודת מפנה?','אילו שאלות אני נוהג לשאול?','איך אני עושה מסגור מחדש?','איך הניסוח שלי משתנה לפי האדם?','באילו מקרים אני משנה כיוון באמצע השיחה?'],
+  global:['איך אני בדרך כלל מגיב להתנגדות?','מה חוזר הכי הרבה בייעוצים?','מה השתנה בחודש האחרון?','האם העצות שלי עבדו?','מצא מקרים דומים לריבים בזוגיות','אילו עקרונות חוזרים אצלי?','אילו חריגים קיימים?','איפה שיניתי את דעתי?','אילו שאלות אני נוהג לשאול?','מה עדיין פתוח?']
 };
 /* ---------- ממשק העוזר ---------- */
 let askScope={type:'global'};
@@ -1249,6 +1392,7 @@ function knowledgePanel(m){
     ${stepHtml('מה קרה בפועל',an.results,m.id,{cat:'result',empty:'לא דווח על תוצאה של עצה קודמת'})}
     ${stepHtml('מעקב',an.followups,m.id,{cat:'follow',empty:'לא נקבע מעקב'})}
     ${stepHtml('חריגים',an.contradictions,m.id,{cat:'except',empty:'לא זוהה חריג'})}
+    ${stepHtml('מהלכי ייעוץ (מועמדים)',an.methodology,m.id,{cat:'reason',empty:(an.speakers||[]).length?'לא זוהה מהלך':'בהקלטה הזו לא מסומנים דוברים, ולכן אי אפשר לזהות מהלכים'})}
   </div>`;
 }
 function sourcePanel(m){
@@ -1403,7 +1547,23 @@ function principlesView(){
     </a>`;
   }).join('');
   return`<p class="section-note">עיקרון מועמד הוא ניסוח של דפוס שחוזר בעצות שלך. הקישור למקרים נעשה לפי חפיפת מילים, ולכן הוא השערה עד שתאשר אותו.</p>
-  <div class="principle-grid">${cards||emptyState('עדיין אין עקרונות','')}</div>`;
+  <div class="principle-grid">${cards||emptyState('עדיין אין עקרונות','')}</div>
+  ${methodSection()}`;
+}
+function methodSection(){
+  const {patterns,sequences}=methodPatterns(data.meetings);const cov=methodCoverage(data.meetings);
+  const Q={question:'אילו שאלות אני נוהג לשאול?',reframe:'איך אני עושה מסגור מחדש?',rationale:'איך אני מנמק עצות?',adaptation:'באילו מקרים אני משנה כיוון באמצע השיחה?',followup_plan:'איך אני קובע בדיקה בהמשך?',client_resistance:'איך אני בדרך כלל מגיב להתנגדות?',client_turning_point:'מה קורה לפני נקודת מפנה?'};
+  const card=p=>{const o=p.occ[0];return`<div class="principle-card method-card">
+    <h3>${esc(p.label)}</h3>
+    <p class="why-q">״${esc(o.it.text)}״</p>
+    <div class="p-foot">${pill(p.status,p.status==='חוזר'||p.status==='מבוסס'?'accent':'ev')}<span>${p.recordings} הקלטות · ${cnt(p.people,'אדם אחד','אנשים')}</span>
+      <button class="link-btn" type="button" data-ask-open="${esc(Q[p.subtype]||'איך אני מייעץ?')}" data-scope-type="global" data-scope-id="">${ic('spark')}דוגמאות וניתוח</button></div>
+  </div>`};
+  const seqs=sequences.filter(x=>x.recordings>=2);
+  return`<div class="section-head block"><h2>דפוסי ייעוץ מההקלטות</h2><button class="see-link link-btn" type="button" data-ask-open="מה השיטה שלי? אילו מהלכי ייעוץ חוזרים?" data-scope-type="global" data-scope-id="">שאל על השיטה ${ic('fwd')}</button></div>
+  <p class="section-note">${esc(cov.text)} מהלך שהופיע בהקלטה אחת הוא תצפית מועמדת. „חוזר” דורש לפחות 2 הקלטות של 2 אנשים.</p>
+  <div class="principle-grid">${patterns.map(card).join('')||emptyState('לא זוהו מהלכים','מהלכים מזוהים רק בהקלטות עם דוברים מסומנים.')}</div>
+  ${seqs.length?`<div class="section-head block"><h2>רצפים חוזרים</h2></div><div class="panel">${seqs.map(x=>`<div class="adv-row"><p class="adv-text">${esc(METHOD[x.from].label)} ← ${esc(METHOD[x.to].label)}</p><div class="adv-foot">${pill(x.status,'accent')}<span>${x.recordings} הקלטות · ${cnt(x.people,'אדם אחד','אנשים')}</span>${x.occ.map(o=>`<a href="#/case/${esc(o.m.id)}">${esc(o.m.person)} · ${formatDate(o.m.date)}</a>`).join('<i class="dot-sep"></i>')}</div></div>`).join('')}</div>`:''}`;
 }
 function principleView(id){
   const p=data.principles.find(x=>x.id===id);
@@ -2081,4 +2241,4 @@ if('serviceWorker'in navigator){
   window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
 /* debug/test hook */
-window.__consulting={parseWindow,conceptKeys,recurringConcepts,adviceOutcomes,retrieveEvidence,buildSynthesisRequest,validateSynthesis,allCases,casesOfPerson,casesOfRecording,recordingsOfCase,SYNTHESIS,askSecondBrain,detectIntent,scopeFromRoute,SEED,load,save,analyzeTranscript,splitSegments,searchAll,tokenize,variants,relatedPrinciples,linkedCases,allPeople,allAdvice,adviceChanges,zmanimFor,hebrewDate,gematria,importMeeting,validBackup,get data(){return data},navigate,esc};
+window.__consulting={detectMethodology,methodPatterns,methodCoverage,methodFocus,METHOD,parseWindow,conceptKeys,recurringConcepts,adviceOutcomes,retrieveEvidence,buildSynthesisRequest,validateSynthesis,allCases,casesOfPerson,casesOfRecording,recordingsOfCase,SYNTHESIS,askSecondBrain,detectIntent,scopeFromRoute,SEED,load,save,analyzeTranscript,splitSegments,searchAll,tokenize,variants,relatedPrinciples,linkedCases,allPeople,allAdvice,adviceChanges,zmanimFor,hebrewDate,gematria,importMeeting,validBackup,get data(){return data},navigate,esc};

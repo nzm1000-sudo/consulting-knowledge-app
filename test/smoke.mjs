@@ -67,14 +67,14 @@ assert(app,'__consulting hook missing');
 const data=app.data;
 
 // 1. seed intact
-assert.equal(data.meetings.length,4,'seed meetings');
+assert.equal(data.meetings.length,6,'seed meetings');
 assert.equal(data.people.length,3,'seed people');
 assert.equal(data.principles.length,3,'seed principles');
-assert.equal(data.followups.length,4,'seed followups');
+assert.equal(data.followups.length,6,'seed followups');
 assert.equal(data.meetings[0].id,'m1');
 
 // 2. analysis (v3) applied to all meetings, with evidence integrity
-for(const m of data.meetings)assert(m.analysis&&m.analysis.version===3&&m.analysis.segments.length>0,'analysis for '+m.id);
+for(const m of data.meetings)assert(m.analysis&&m.analysis.version===5&&m.analysis.segments.length>0,'analysis for '+m.id);
 const byId=id=>data.meetings.find(m=>m.id===id).analysis;
 const a1=byId('m1');
 assert(a1.problem&&a1.problem.text.includes('הקושי'),'m1 problem');
@@ -123,7 +123,7 @@ assert(app.searchAll('<script>').total===0,'no crash on markup');
 const dn=app.allPeople().find(p=>p.name==='דניאל');
 assert.equal(dn.count,2,'daniel has 2 meetings');
 assert.equal(dn.last,'2026-09-17');
-assert.equal(app.adviceChanges().length,1,'daniel advice change detected');
+assert.equal(app.adviceChanges().filter(x=>x.person==='דניאל').length,1,'daniel advice change detected');assert.equal(app.adviceChanges().length,3,'one change per person with two meetings');
 
 // 5. principles linked by overlap (hypothesis)
 const rel1=app.relatedPrinciples(data.meetings[0]);
@@ -220,7 +220,7 @@ assert(a.needsScope&&a.related.length>0,'ambiguous pronoun → choose person');
 // consultant questions = candidate observations only
 a=ask('אילו שאלות אני נוהג לשאול?',{type:'global'});
 assert(a.findings.some(f=>f.text.includes('איך עבד כלל עשר הדקות')),'consultant question found');
-assert(a.unknowns.some(u=>u.includes('תצפיות מועמדות')),'single recording is not a method');
+assert(a.unknowns.some(u=>u.includes('תצפית מועמדת')),'method rule stated');
 // unsupported question → no invented answer
 a=ask('מה מחיר הזהב בלונדון?',{type:'global'});
 assert.equal(a.intent,'search');assert.equal(a.findings.length,0);
@@ -328,5 +328,48 @@ a=ask('מתי שיניתי את ההמלצה ומה היה הנימוק?',{type:
 assert.equal(a.intent,'changedMind');
 assert(a.findings.some(f=>f.label==='הנימוק שנאמר בפגישה המאוחרת'&&f.text.startsWith('כי')));
 assert(allVerbatim(a)&&noInvention(a));
+
+// 13. Phase E: method discovery (synthetic data only)
+const M=app.data.meetings,mm=id=>M.find(m=>m.id===id);
+// no speakers → no methodology (we cannot know who said what)
+assert.equal(mm('m1').analysis.methodology.length,0,'unlabelled recording yields nothing');
+// consultant moves and client events are verbatim sentences, labelled as inferences
+const m5=mm('m5').analysis.methodology,m6=mm('m6').analysis.methodology;
+for(const it of [...m5,...m6]){assert.equal(it.kind,'inferred');assert.equal(segText(it.evidence.seg===undefined?'':(M.find(m=>m.analysis.methodology.includes(it)).id),it.evidence.seg),it.text)}
+assert(m5.some(x=>x.subtype==='client_resistance'&&x.response),'resistance with consultant response');
+assert(m5.some(x=>x.subtype==='reframe'),'reframe detected');
+assert(m5.some(x=>x.subtype==='client_turning_point'&&x.before),'turning point with preceding move');
+assert(!m5.some(x=>x.actor==='consultant'&&x.evidence.speaker==='נועה'),'client sentences are never consultant moves');
+// cross-recording status
+const mp=app.methodPatterns(M);
+const st=k=>mp.patterns.find(p=>p.subtype===k);
+assert.equal(st('question').status,'חוזר');assert(st('question').people>=3,'question across ≥3 people');
+assert.equal(st('reframe').status,'חוזר');assert.equal(st('reframe').recordings,2);
+assert.equal(st('adaptation').status,'תצפית מועמדת','one recording = candidate');
+assert(st('rationale')&&st('rationale').recordings===3&&st('rationale').status==='חוזר','advice-with-reason detected in m4, m5, m6');
+assert(mp.sequences.some(x=>x.from==='reframe'&&x.to==='client_turning_point'&&x.recordings===2),'reframe → turning point recurs');
+// statuses are revisable: removing a recording weakens the pattern
+const without=app.methodPatterns(M.filter(m=>m.id!=='m6'));
+assert.equal(without.patterns.find(p=>p.subtype==='reframe').status,'תצפית מועמדת','pattern weakens without m6');
+// assistant: resistance
+a=ask('איך אני בדרך כלל מגיב להתנגדות?',{type:'global'});
+assert.equal(a.intent,'method');
+assert(a.answer.some(p=>p.includes('מה היועץ עשה אחרי ההתנגדות: מסגור מחדש (2)')),'response to resistance counted');
+assert(a.findings.some(f=>f.label.startsWith('מה עשה היועץ מיד אחרי')),'shows the consultant move after');
+assert(allVerbatim(a));
+assert(a.coverage.text.includes('שכבת המתודולוגיה: 3 מתוך '+app.data.meetings.length),'methodology coverage is dynamic');
+// turning points
+a=ask('מה קורה לפני נקודת מפנה?',{type:'global'});
+assert(a.answer.some(p=>p.includes('מה קדם לנקודת המפנה: מסגור מחדש (2)')));
+// overview + wording by person
+a=ask('איך הניסוח שלי משתנה לפי האדם?',{type:'global'});
+assert(a.findings.some(f=>f.kind==='pattern')&&a.findings.some(f=>f.section&&f.section.startsWith('רצף:')),'overview with sequences');
+assert(noInvention(a)&&allVerbatim(a));
+// a single recording never becomes "method"
+a=ask('באילו מקרים אני משנה כיוון באמצע השיחה?',{type:'global'});
+assert(a.answer[0].includes('תצפית מועמדת')&&a.unknowns.some(u=>u.includes('הופיע בהקלטה אחת בלבד')));
+// recording scope
+a=ask('אילו מהלכי ייעוץ התרחשו כאן?',{type:'recording',id:'m1'});
+assert(a.answer[0].includes('לא זוהו מהלכי ייעוץ'),'no moves in an unlabelled recording');
 
 console.log('ALL SMOKE TESTS PASSED');
