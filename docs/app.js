@@ -523,7 +523,8 @@ function hebrewDate(date=new Date()){
     return gematria(+p.day)+' ב'+p.month+' '+gematria(+p.year);
   }catch{return''}
 }
-function zmanimCard(){
+function zmanimCard(){return zmanimOnly()+weatherCard()}
+function zmanimOnly(){
   const now=new Date();
   const fmt=new Intl.DateTimeFormat('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:PLACE.tz});
   const list=zmanimFor(now);
@@ -534,6 +535,76 @@ function zmanimCard(){
     <p class="zm-greg">${new Intl.DateTimeFormat('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:PLACE.tz}).format(now)}</p>
     <ul class="zm-list">${list.map(z=>`<li class="${z===next?'zm-next':z.t&&z.t<now?'zm-past':''}"><span>${z.label}</span><span>${z.t?fmt.format(z.t):'—'}</span></li>`).join('')}</ul>
     <p class="zm-note">חישוב אסטרונומי בגובה פני הים. להלכה יש לבדוק בלוח מוסמך.</p>
+  </section>`;
+}
+
+
+/* ---------- מזג אוויר בנתיבות (Open-Meteo, בלי מפתח) ---------- */
+const WX_KEY='consultingWeather',WX_TTL=20*60e3;
+let wx=(()=>{try{return JSON.parse(localStorage.getItem(WX_KEY))}catch{return null}})(),wxBusy=false,wxFailed=false;
+const WMO=c=>c===0?['בהיר','clear']:c<=2?['מעונן חלקית','partly']:c===3?['מעונן','cloud']:c<=48?['ערפל','fog']:c<=57?['טפטוף','rain']:c<=67?['גשם','rain']:c<=77?['שלג','snow']:c<=82?['ממטרים','rain']:['סופת רעמים','storm'];
+function refreshWeather(force){
+  if(wxBusy||typeof fetch!=='function')return;
+  if(!force&&wx&&Date.now()-wx.at<WX_TTL)return;
+  wxBusy=true;
+  const u='https://api.open-meteo.com/v1/forecast?latitude='+PLACE.lat+'&longitude='+PLACE.lon+'&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,is_day&hourly=temperature_2m,precipitation_probability,weather_code&daily=temperature_2m_max,temperature_2m_min,uv_index_max,precipitation_probability_max&forecast_days=2&timezone=Asia%2FJerusalem';
+  fetch(u).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(j=>{
+    const now=Date.now();const hi=j.hourly||{};
+    const key=String(j.current?.time||'').slice(0,13);let i0=(hi.time||[]).findIndex(t=>t.slice(0,13)>=key);if(i0<0)i0=0; // השעה הנוכחית לפי שעון ישראל שמחזיר השירות
+    wx={at:now,cur:j.current,daily:j.daily,hours:(hi.time||[]).slice(i0,i0+13).map((t,i)=>({t,temp:hi.temperature_2m[i0+i],pp:hi.precipitation_probability?.[i0+i]??0}))};
+    wxFailed=false;try{localStorage.setItem(WX_KEY,JSON.stringify(wx))}catch{}
+  }).catch(()=>{wxFailed=true}).finally(()=>{wxBusy=false;const w=el('weather');if(w&&w.outerHTML!==undefined){w.outerHTML=weatherCard();applyAnimRate()}});
+}
+function wxIcon(kind,day){
+  const sun=`<g class="wx-sun"><circle cx="24" cy="24" r="7.5" fill="url(#wxg)"/><g class="wx-rays">${Array.from({length:12},(_,i)=>`<line x1="24" y1="${i%2?9:7}" x2="24" y2="${i%2?12:13}" transform="rotate(${i*30} 24 24)"/>`).join('')}</g></g>`;
+  const moon=`<g class="wx-moon"><path d="M29 14a11 11 0 1 0 5 19 9 9 0 0 1-5-19z" fill="url(#wxg)"/><circle class="wx-star" cx="36" cy="12" r="1.1"/><circle class="wx-star s2" cx="40" cy="20" r=".8"/></g>`;
+  const cloud=(x=0,y=0,c='wx-cloud')=>`<path class="${c}" transform="translate(${x} ${y})" d="M14 34h22a7 7 0 0 0 0-14 10 10 0 0 0-19-2 7.5 7.5 0 0 0-3 16z"/>`;
+  const drops=`<g class="wx-drops">${[16,23,30].map((x,i)=>`<line x1="${x}" y1="37" x2="${x-2}" y2="43" style="animation-delay:${-i*.5}s"/>`).join('')}</g>`;
+  let body;
+  if(kind==='clear')body=day?sun:moon;
+  else if(kind==='partly')body=`<g transform="translate(-5 -5) scale(.8)">${day?sun:moon}</g>${cloud(4,2)}`;
+  else if(kind==='cloud')body=cloud(-3,-3,'wx-cloud back')+cloud(2,1);
+  else if(kind==='fog')body=`<g class="wx-fog"><line x1="8" y1="20" x2="40" y2="20"/><line x1="12" y1="27" x2="36" y2="27"/><line x1="8" y1="34" x2="40" y2="34"/></g>`;
+  else if(kind==='storm')body=cloud(0,-4)+`<path class="wx-bolt" d="M25 31l-5 8h5l-3 7 8-10h-5l3-5z"/>`;
+  else body=cloud(0,-5)+drops;
+  return`<svg class="wx-icon" viewBox="0 0 48 48" aria-hidden="true"><defs><radialGradient id="wxg" cx=".35" cy=".35"><stop offset="0" style="stop-color:#fff"/><stop offset=".35" style="stop-color:var(--k-outcome)"/><stop offset="1" style="stop-color:var(--accent-2)"/></radialGradient></defs>${body}</svg>`;
+}
+function wxChart(hours){
+  if(!hours||hours.length<2)return'';
+  const W=280,H=64,pad=6,ts=hours.map(h=>h.temp),mn=Math.min(...ts),mx=Math.max(...ts),rg=Math.max(1,mx-mn);
+  const X=i=>W-pad-i*(W-2*pad)/(hours.length-1), // מימין לשמאל: עכשיו בצד ימין
+  Y=v=>10+(1-(v-mn)/rg)*(H-30);
+  let d=`M${X(0)} ${Y(ts[0])}`;for(let i=1;i<ts.length;i++){const xm=(X(i-1)+X(i))/2;d+=` C${xm} ${Y(ts[i-1])} ${xm} ${Y(ts[i])} ${X(i)} ${Y(ts[i])}`}
+  const area=d+` L${X(ts.length-1)} ${H-16} L${X(0)} ${H-16}Z`;
+  const bars=hours.map((h,i)=>h.pp>0?`<rect x="${X(i)-2}" y="${H-16-h.pp/100*12}" width="4" height="${h.pp/100*12}" rx="1.5" class="wx-pp"/>`:'').join('');
+  const labels=hours.map((h,i)=>i%3===0?`<text x="${X(i)}" y="${H-3}">${h.t.slice(11,13)}</text>`:'').join('');
+  const imx=ts.indexOf(mx),imn=ts.indexOf(mn);
+  return`<svg class="wx-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="תחזית ל־12 השעות הקרובות"><defs><linearGradient id="wxa" x1="0" x2="0" y1="0" y2="1"><stop offset="0" style="stop-color:var(--accent);stop-opacity:.32"/><stop offset="1" style="stop-color:var(--accent);stop-opacity:0"/></linearGradient><linearGradient id="wxl" x1="0" x2="1"><stop offset="0" style="stop-color:var(--accent)"/><stop offset="1" style="stop-color:var(--accent-2)"/></linearGradient></defs>
+    <path d="${area}" fill="url(#wxa)"/>${bars}<path d="${d}" class="wx-line"/>
+    <circle cx="${X(0)}" cy="${Y(ts[0])}" r="3" class="wx-now"/>
+    <text x="${X(imx)}" y="${Y(mx)-4}" class="wx-ext">${Math.round(mx)}°</text>${imn!==imx?`<text x="${X(imn)}" y="${Y(mn)+11}" class="wx-ext">${Math.round(mn)}°</text>`:''}
+    ${labels}</svg>`;
+}
+function weatherCard(){
+  const head=`<h2>מזג אוויר · ${PLACE.name}${wx?`<span class="wx-upd">עודכן ${new Intl.DateTimeFormat('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:PLACE.tz}).format(new Date(wx.at))}</span>`:''}</h2>`;
+  if(!wx||!wx.cur)return`<section class="ctx-card wx" id="weather" aria-label="מזג אוויר">${head}<p class="ctx-empty">${wxFailed?'אין כרגע חיבור לשירות מזג האוויר. ננסה שוב בעוד כמה דקות.':'טוען נתונים…'}</p></section>`;
+  const c=wx.cur,[label,kind]=WMO(c.weather_code),d=wx.daily||{};
+  const dirs=['צפון','צפון־מזרח','מזרח','דרום־מזרח','דרום','דרום־מערב','מערב','צפון־מערב'];
+  const wd=dirs[Math.round(((c.wind_direction_10m||0)%360)/45)%8];
+  return`<section class="ctx-card wx" id="weather" aria-label="מזג אוויר">${head}
+    <div class="wx-now-row">
+      ${wxIcon(kind,!!c.is_day)}
+      <div class="wx-temp"><strong>${Math.round(c.temperature_2m)}°</strong><span>${label}</span></div>
+      <div class="wx-range"><span>${d.temperature_2m_max?Math.round(d.temperature_2m_max[0])+'°':''}</span><i></i><span>${d.temperature_2m_min?Math.round(d.temperature_2m_min[0])+'°':''}</span></div>
+    </div>
+    ${wxChart(wx.hours)}
+    <dl class="wx-grid">
+      <div><dt>מרגיש כמו</dt><dd>${Math.round(c.apparent_temperature)}°</dd></div>
+      <div><dt>לחות</dt><dd>${Math.round(c.relative_humidity_2m)}%</dd></div>
+      <div><dt>רוח</dt><dd><svg class="wx-arrow" viewBox="0 0 12 12" style="transform:rotate(${(c.wind_direction_10m||0)+180}deg)" aria-hidden="true"><path d="M6 1l3.5 9L6 8 2.5 10z"/></svg>${Math.round(c.wind_speed_10m)} קמ״ש <small>${wd}</small></dd></div>
+      <div><dt>סיכוי לגשם</dt><dd>${d.precipitation_probability_max?d.precipitation_probability_max[0]:0}%</dd></div>
+      <div><dt>קרינת UV</dt><dd>${d.uv_index_max?Math.round(d.uv_index_max[0]):'—'}</dd></div>
+    </dl>
   </section>`;
 }
 
@@ -1193,7 +1264,7 @@ function initPalette(){
 /* ---------- תנועה: מלאה / עדינה / כבויה ---------- */
 const MOTION=[{k:'full',n:'מלאה'},{k:'calm',n:'עדינה'},{k:'off',n:'כבויה'}];
 // מהירות יחסית: מלאה = חצי מהמקור, עדינה = רבע. שום מצב חוץ מ„כבויה” לא עוצר.
-const SPEED={full:.5,calm:.25,off:0};
+const SPEED={full:.4,calm:.18,off:0};
 function applyAnimRate(){
   if(!document.getAnimations)return;
   const r=SPEED[motionMode()]||1;
@@ -1280,7 +1351,12 @@ function initFx(){
   /* קו הדופק: מוניטור עם צורת פעימה אמיתית, ראש כתיבה שנע מימין לשמאל, שובל שדוהה ורשת מדידה */
   const g0=(x,c0,w)=>Math.exp(-((x-c0)**2)/(2*w*w));
   // פעימה אחת: גל P, קומפלקס QRS חד, וגל T רחב
-  const wave=x=>.13*g0(x,.16,.028)-.09*g0(x,.285,.007)+1*g0(x,.305,.008)-.24*g0(x,.328,.009)+.3*g0(x,.52,.05);
+  // כל פעימה שונה: גובה, רוחב ומיקום הפיקים נגזרים ממספר הפעימה, כך שהרצף לא חוזר על עצמו לעולם
+  const rnd=(n,k)=>{const v=Math.sin(n*127.1+k*311.7)*43758.5453;return v-Math.floor(v)};
+  const wave=(x,n)=>{
+    const P=.08+.1*rnd(n,1),R=.68+.5*rnd(n,2),S=.14+.16*rnd(n,3),T=.2+.18*rnd(n,4),sh=(rnd(n,5)-.5)*.06,tw=.04+.025*rnd(n,6);
+    const notch=rnd(n,7)>.78?.1*g0(x,.42+sh,.018):0;
+    return P*g0(x,.16+sh*.5,.028)-.09*g0(x,.285+sh,.007)+R*g0(x,.305+sh,.008)-S*g0(x,.328+sh,.009)+T*g0(x,.52+sh,tw)+notch};
   const BEAT=4800,SWEEP=9600;
   let pc=null,pctx=null,pw=0,ph=0;
   function drawPulse(t){
@@ -1300,7 +1376,7 @@ function initFx(){
     // ראש הכתיבה: נע מימין לשמאל, סבב מלא ב־9.6 שניות (שתי פעימות על המסך)
     const now=sweeping?t:SWEEP*.72;
     const head=(now%SWEEP)/SWEEP;
-    const val=(time,lag,sc)=>{const x=(((time-lag)%BEAT)+BEAT)%BEAT/BEAT;return wave(x)*sc+.025*Math.sin(time/5200)};
+    const val=(time,lag,sc)=>{const tt=time-lag,n=Math.floor(tt/BEAT),x=(tt-n*BEAT)/BEAT;return wave(x,n)*sc+.025*Math.sin(time/5200)};
     const layers=[
       {lag:0,sc:1,c:col.a,lw:1.7,glow:true,alpha:1},
       {lag:BEAT*.045,sc:.42,c:col.b,lw:1,glow:false,alpha:.45}
@@ -1406,7 +1482,8 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='/'&&!inField&&!el('search-dialog').open){e.preventDefault();openPalette()}
   else if(e.key==='Escape')closeMenu();
 });
-if(typeof setInterval==='function')setInterval(()=>{const z=el('zmanim');if(z&&z.outerHTML!==undefined)z.outerHTML=zmanimCard()},60000);
+if(typeof setInterval==='function')setInterval(()=>{const z=el('zmanim');if(z&&z.outerHTML!==undefined)z.outerHTML=zmanimOnly();refreshWeather()},60000);
+refreshWeather();
 if('serviceWorker'in navigator){
   window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }

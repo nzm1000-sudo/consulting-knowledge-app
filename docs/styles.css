@@ -844,3 +844,51 @@ html,body{overflow-x:clip}
 /* ---------- pulse monitor (v3.5) ---------- */
 .hero .pulse{display:block;width:100%;height:58px;margin:-2px 0 12px}
 @media (max-width:760px){.hero .pulse{height:44px}}
+
+/* ---------- weather (v3.7) ---------- */
+.wx h2{align-items:baseline}
+.wx-upd{font-weight:500;font-size:11.5px;color:var(--muted);font-family:var(--font-mono)}
+.wx-now-row{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.wx-icon{width:52px;height:52px;flex-shrink:0;overflow:visible;filter:drop-shadow(0 4px 10px var(--glow))}
+.wx-rays line{stroke:var(--k-outcome);stroke-width:1.6;stroke-linecap:round;opacity:.8}
+.wx-rays{transform-origin:24px 24px;animation:wx-spin 60s linear infinite}
+.wx-cloud{fill:var(--surface);stroke:color-mix(in srgb,var(--accent-2) 55%,var(--line));stroke-width:1.2;animation:wx-drift 14s ease-in-out infinite}
+.wx-cloud.back{opacity:.6;animation-delay:-7s}
+.wx-drops line{stroke:var(--accent);stroke-width:1.6;stroke-linecap:round;animation:wx-rain 2.4s linear infinite}
+.wx-fog line{stroke:var(--muted);stroke-width:2;stroke-linecap:round;opacity:.6;animation:wx-drift 10s ease-in-out infinite}
+.wx-fog line:nth-child(2){animation-delay:-3s}.wx-fog line:nth-child(3){animation-delay:-6s}
+.wx-bolt{fill:var(--k-outcome);animation:wx-flash 6s ease-in-out infinite}
+.wx-star{fill:var(--k-outcome);animation:breathe-bar 5s ease-in-out infinite}.wx-star.s2{animation-delay:-2.5s}
+@keyframes wx-spin{to{transform:rotate(360deg)}}
+@keyframes wx-drift{0%,100%{transform:translateX(0)}50%{transform:translateX(2px)}}
+@keyframes wx-rain{0%{transform:translateY(-3px);opacity:0}30%{opacity:1}100%{transform:translateY(4px);opacity:0}}
+@keyframes wx-flash{0%,90%,100%{opacity:.85}93%{opacity:.3}96%{opacity:1}}
+.wx-temp{display:flex;flex-direction:column;line-height:1.1}
+.wx-temp strong{font-family:var(--font-display);font-size:34px;font-weight:600;background:var(--grad-text);-webkit-background-clip:text;background-clip:text;color:transparent}
+.wx-temp span{font-size:13px;color:var(--ink-2)}
+.wx-range{margin-inline-start:auto;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.wx-range i{width:3px;height:22px;border-radius:3px;background:linear-gradient(var(--k-problem),var(--k-observe))}
+.wx-chart{display:block;width:100%;height:64px;overflow:visible}
+.wx-line{fill:none;stroke:url(#wxl);stroke-width:1.8;stroke-linecap:round}
+.wx-pp{fill:var(--k-observe);opacity:.45}
+.wx-now{fill:var(--surface);stroke:var(--accent);stroke-width:2;animation:pulse-ring 4.8s ease-out infinite}
+.wx-chart text{font-family:var(--font-mono);font-size:9px;fill:var(--muted);text-anchor:middle}
+.wx-chart .wx-ext{fill:var(--ink-2);font-size:9.5px}
+.wx-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin:8px 0 0;padding-top:10px;border-top:1px solid var(--line-2)}
+.wx-grid div{display:flex;justify-content:space-between;gap:6px;font-size:12.5px}
+.wx-grid div:nth-child(3){grid-column:1/-1}
+.wx-grid dt{color:var(--muted)}
+.wx-grid dd{margin:0;display:flex;align-items:center;gap:4px;font-variant-numeric:tabular-nums}
+.wx-grid small{color:var(--muted);font-size:11.5px}
+.wx-arrow{width:12px;height:12px;fill:var(--accent)}
+
+/* ---------- logo: rings that never stop spreading (v3.7) ---------- */
+.brand-mark{background:none!important;box-shadow:none!important;animation:none!important;width:40px;height:40px;color:var(--ink)}
+.logo{width:40px;height:40px;overflow:visible}
+.logo .ring{fill:none;stroke:var(--logo-ink);vector-effect:non-scaling-stroke}
+.logo .r1{stroke-width:1.5;opacity:.95}.logo .r2{stroke-width:1.25;opacity:.72}.logo .r3{stroke-width:1.05;opacity:.5}.logo .r4{stroke-width:.9;opacity:.3}.logo .r5{stroke-width:.75;opacity:.14}
+.logo .rip{fill:none;stroke:var(--accent);stroke-width:1.2;vector-effect:non-scaling-stroke;transform-box:fill-box;transform-origin:center;opacity:0;animation:logo-ripple 12s cubic-bezier(.2,.6,.3,1) infinite}
+.logo .rip.b{animation-delay:-6s}
+.logo .core{filter:drop-shadow(0 0 3px var(--glow))}
+@keyframes logo-ripple{0%{transform:scale(.18);opacity:.9}100%{transform:scale(1);opacity:0}}
+:root{--logo-ink:color-mix(in srgb,var(--ink) 78%,var(--accent))}
