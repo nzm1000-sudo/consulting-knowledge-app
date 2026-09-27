@@ -1,5 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="16" fill="#0E5E56"/>
-  <path d="M18 19h28v23H31l-9 7v-7h-4z" fill="#F4F2EC"/>
-  <path d="M25 27h14M25 33h10" stroke="#0E5E56" stroke-width="3" stroke-linecap="round"/>
+  <defs><radialGradient id="c" cx=".38" cy=".35" r=".7"><stop offset="0" stop-color="#fff"/><stop offset=".28" stop-color="#12806F"/><stop offset="1" stop-color="#3446A3"/></radialGradient></defs>
+  <rect width="64" height="64" rx="14" fill="#F4F5F3"/>
+  <g fill="none" stroke="#1E3B3A">
+    <circle cx="32" cy="32" r="27" stroke-width="1.6" opacity=".18"/><circle cx="32" cy="32" r="21.5" stroke-width="1.9" opacity=".35"/>
+    <circle cx="32" cy="32" r="16" stroke-width="2.2" opacity=".55"/><circle cx="32" cy="32" r="10.6" stroke-width="2.5" opacity=".78"/>
+  </g>
+  <circle cx="32" cy="32" r="5.2" fill="url(#c)"/>
 </svg>
