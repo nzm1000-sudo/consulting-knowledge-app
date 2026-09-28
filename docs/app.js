@@ -545,10 +545,10 @@ function followRow(f,opts={}){
   </div>`;
 }
 function adviceRow({m,a,reason},opts={}){
-  return`<div class="adv-row">
-    <p class="adv-text">${esc(a.text)}</p>
-    ${reason?`<p class="adv-why"><b>למה:</b> ${esc(reason.text)}</p>`:`<p class="adv-why"><b>למה:</b> <span class="muted-note">לא זוהה נימוק מפורש</span></p>`}
-    <div class="adv-foot">
+  return`<div class="tip-row">
+    <p class="tip-text">${esc(a.text)}</p>
+    ${reason?`<p class="tip-why"><b>למה:</b> ${esc(reason.text)}</p>`:`<p class="tip-why"><b>למה:</b> <span class="muted-note">לא זוהה נימוק מפורש</span></p>`}
+    <div class="tip-foot">
       ${opts.noPerson?'':`<a href="#/person/${encodeURIComponent(m.person)}">${esc(m.person)}</a><i class="dot-sep"></i>`}
       <span>${formatDate(m.date)}</span><i class="dot-sep"></i>
       <a href="#/case/${esc(m.id)}">${esc(m.title)}</a>
@@ -1478,7 +1478,7 @@ function fileView(id){
     <div class="stack">
       <section>${sectionHead('ציר הזמן של התיק')}<div class="timeline">${chrono.map(m=>`<a class="tl-item" href="#/case/${esc(m.id)}"><span class="tl-date">${formatFull(m.date)} · ${esc(m.person)}</span><strong>${esc(m.title)}</strong>${m.summary?`<p>${esc(m.summary)}</p>`:''}</a>`).join('')||'<p class="muted-note">אין הקלטות בתיק.</p>'}</div></section>
       <section>${sectionHead('עצות ונימוקים')}<div class="panel">${adv.length?adv.map(x=>adviceRow(x)).join(''):emptyState('אין עצות בתיק','')}</div></section>
-      <section>${sectionHead('תוצאות ידועות')}<div class="panel">${results.length?results.map(({m,r})=>`<div class="adv-row"><p class="adv-text">${esc(r.text)}</p><div class="adv-foot"><span>${formatDate(m.date)}</span><i class="dot-sep"></i><a href="#/case/${esc(m.id)}">${esc(m.title)}</a><button class="link-btn" type="button" data-src-case="${esc(m.id)}" data-src-seg="${r.evidence.seg}">${ic('quote')}ציון מקור</button></div></div>`).join(''):emptyState('עוד לא דווחו תוצאות','')}</div></section>
+      <section>${sectionHead('תוצאות ידועות')}<div class="panel">${results.length?results.map(({m,r})=>`<div class="tip-row"><p class="tip-text">${esc(r.text)}</p><div class="tip-foot"><span>${formatDate(m.date)}</span><i class="dot-sep"></i><a href="#/case/${esc(m.id)}">${esc(m.title)}</a><button class="link-btn" type="button" data-src-case="${esc(m.id)}" data-src-seg="${r.evidence.seg}">${ic('quote')}ציון מקור</button></div></div>`).join(''):emptyState('עוד לא דווחו תוצאות','')}</div></section>
       <section>${sectionHead('מעקבים')}<div class="panel">${fs.length?fs.map(f=>followRow(f)).join(''):emptyState('אין מעקבים בתיק','')}</div></section>
     </div>
   </div>`;
@@ -1547,7 +1547,7 @@ function adviceView(){
   return`<p class="section-note">כל עצה עם הנימוק שלה, האדם, ההקלטה והמשפט המקורי.</p>
   <div class="page-tools">
     <input id="filter-advice" type="search" value="${esc(f)}" placeholder="סינון עצות" aria-label="סינון עצות">
-    <select id="filter-adv-person" aria-label="סינון לפי אדם"><option value="">כל האנשים</option>${allPeople().map(p=>`<option ${p.name===person?'selected':''} value="${esc(p.name)}">${esc(p.name)}</option>`).join('')}</select>
+    <select id="filter-tip-person" aria-label="סינון לפי אדם"><option value="">כל האנשים</option>${allPeople().map(p=>`<option ${p.name===person?'selected':''} value="${esc(p.name)}">${esc(p.name)}</option>`).join('')}</select>
   </div>
   <div class="panel" id="advice-list">${adviceList(f,person)}</div>`;
 }
@@ -1562,13 +1562,13 @@ function contradictionsView(){
   return`<p class="section-note">כאן מופיעים מקרים שדורשים בדיקה שלך: חריגים שנאמרו בפגישות, ועצות שהשתנו אצל אותו אדם. המערכת לא מכריעה אם זו סתירה אמיתית.</p>
   <div class="stack">
     <section>${sectionHead('חריגים שנאמרו בפגישות')}
-      <div class="panel">${ex.length?ex.map(({m,c})=>`<div class="adv-row"><p class="adv-text">${esc(c.text)}</p>
-        <div class="adv-foot"><a href="#/person/${encodeURIComponent(m.person)}">${esc(m.person)}</a><i class="dot-sep"></i><span>${formatDate(m.date)}</span><i class="dot-sep"></i><a href="#/case/${esc(m.id)}">${esc(m.title)}</a>
+      <div class="panel">${ex.length?ex.map(({m,c})=>`<div class="tip-row"><p class="tip-text">${esc(c.text)}</p>
+        <div class="tip-foot"><a href="#/person/${encodeURIComponent(m.person)}">${esc(m.person)}</a><i class="dot-sep"></i><span>${formatDate(m.date)}</span><i class="dot-sep"></i><a href="#/case/${esc(m.id)}">${esc(m.title)}</a>
         <button class="link-btn" type="button" data-src-case="${esc(m.id)}" data-src-seg="${c.evidence.seg}">${ic('quote')}ציון מקור</button></div></div>`).join(''):emptyState('לא זוהו חריגים','')}</div>
     </section>
     <section>${sectionHead('עצות שהשתנו לאורך זמן')}
-      <div class="panel">${ch.length?ch.map(x=>`<div class="adv-row">
-        <div class="adv-foot" style="margin-top:0"><a href="#/person/${encodeURIComponent(x.person)}">${esc(x.person)}</a></div>
+      <div class="panel">${ch.length?ch.map(x=>`<div class="tip-row">
+        <div class="tip-foot" style="margin-top:0"><a href="#/person/${encodeURIComponent(x.person)}">${esc(x.person)}</a></div>
         <div class="pair">
           <div><small>קודם · <a href="#/case/${esc(x.earlier.id)}">${formatDate(x.earlier.date)}</a></small><p>${esc(x.a1.text)}</p></div>
           <div><small>אחר כך · <a href="#/case/${esc(x.later.id)}">${formatDate(x.later.date)}</a></small><p>${esc(x.a2.text)}</p></div>
@@ -1602,7 +1602,7 @@ function methodSection(){
   return`<div class="section-head block"><h2>דפוסי ייעוץ מההקלטות</h2><button class="see-link link-btn" type="button" data-ask-open="מה השיטה שלי? אילו מהלכי ייעוץ חוזרים?" data-scope-type="global" data-scope-id="">שאל על השיטה ${ic('fwd')}</button></div>
   <p class="section-note">${esc(cov.text)} מהלך שהופיע בהקלטה אחת הוא תצפית מועמדת. „חוזר” דורש לפחות 2 הקלטות של 2 אנשים.</p>
   <div class="principle-grid">${patterns.map(card).join('')||emptyState('לא זוהו מהלכים','מהלכים מזוהים רק בהקלטות עם דוברים מסומנים.')}</div>
-  ${seqs.length?`<div class="section-head block"><h2>רצפים חוזרים</h2></div><div class="panel">${seqs.map(x=>`<div class="adv-row"><p class="adv-text">${esc(METHOD[x.from].label)} ← ${esc(METHOD[x.to].label)}</p><div class="adv-foot">${pill(x.status,'accent')}<span>${x.recordings} הקלטות · ${cnt(x.people,'אדם אחד','אנשים')}</span>${x.occ.map(o=>`<a href="#/case/${esc(o.m.id)}">${esc(o.m.person)} · ${formatDate(o.m.date)}</a>`).join('<i class="dot-sep"></i>')}</div></div>`).join('')}</div>`:''}`;
+  ${seqs.length?`<div class="section-head block"><h2>רצפים חוזרים</h2></div><div class="panel">${seqs.map(x=>`<div class="tip-row"><p class="tip-text">${esc(METHOD[x.from].label)} ← ${esc(METHOD[x.to].label)}</p><div class="tip-foot">${pill(x.status,'accent')}<span>${x.recordings} הקלטות · ${cnt(x.people,'אדם אחד','אנשים')}</span>${x.occ.map(o=>`<a href="#/case/${esc(o.m.id)}">${esc(o.m.person)} · ${formatDate(o.m.date)}</a>`).join('<i class="dot-sep"></i>')}</div></div>`).join('')}</div>`:''}`;
 }
 function principleView(id){
   const p=data.principles.find(x=>x.id===id);
@@ -1616,8 +1616,8 @@ function principleView(id){
     <header class="d-head"><h2 class="d-title">${esc(p.title)}</h2><div class="d-meta">${pill(p.status==='confirmed'?'מאושר':'עיקרון מועמד',p.status==='confirmed'?'accent':'ev')}<span>${cases.length} מקרים מקושרים</span></div></header>
     <p class="p-statement">${esc(p.description)}</p>
     <div class="pr-sections">
-      ${sec('מקרים מקושרים',cases.length?cases.map(m=>{const a=m.analysis?.advice?.[0];return`<div class="adv-row" style="padding-inline:0"><a class="meta-link" href="#/case/${esc(m.id)}">${esc(m.title)}</a><div class="adv-foot" style="margin-top:3px"><span>${esc(m.person)}</span><i class="dot-sep"></i><span>${formatDate(m.date)}</span></div>${a?`<p class="adv-why">${esc(a.text)}</p>`:''}</div>`}).join(''):'<p class="muted-note">לא נמצאו מקרים עם חפיפה מספקת.</p>')}
-      ${sec('חריגים מתוך המקרים',exc.length||(p.exceptions||[]).length?exc.map(({m,c})=>`<p class="adv-why">״${esc(c.text)}״ · <a href="#/case/${esc(m.id)}">${esc(m.person)}, ${formatDate(m.date)}</a></p>`).join('')+(p.exceptions||[]).map(e=>`<p class="adv-why">${esc(e)}</p>`).join(''):'<p class="muted-note">לא נאמר חריג באף מקרה מקושר.</p>')}
+      ${sec('מקרים מקושרים',cases.length?cases.map(m=>{const a=m.analysis?.advice?.[0];return`<div class="tip-row" style="padding-inline:0"><a class="meta-link" href="#/case/${esc(m.id)}">${esc(m.title)}</a><div class="tip-foot" style="margin-top:3px"><span>${esc(m.person)}</span><i class="dot-sep"></i><span>${formatDate(m.date)}</span></div>${a?`<p class="tip-why">${esc(a.text)}</p>`:''}</div>`}).join(''):'<p class="muted-note">לא נמצאו מקרים עם חפיפה מספקת.</p>')}
+      ${sec('חריגים מתוך המקרים',exc.length||(p.exceptions||[]).length?exc.map(({m,c})=>`<p class="tip-why">״${esc(c.text)}״ · <a href="#/case/${esc(m.id)}">${esc(m.person)}, ${formatDate(m.date)}</a></p>`).join('')+(p.exceptions||[]).map(e=>`<p class="tip-why">${esc(e)}</p>`).join(''):'<p class="muted-note">לא נאמר חריג באף מקרה מקושר.</p>')}
       ${sec('עקרונות קרובים',near.length?near.map(({x})=>`<p style="margin:0 0 6px"><a class="meta-link" href="#/principle/${esc(x.id)}">${esc(x.title)}</a></p>`).join(''):'<p class="muted-note">אין.</p>')}
     </div>
   </div>`;
@@ -1838,7 +1838,7 @@ function bind(){
   live('filter-rec-person','recPerson',()=>{el('recordings-list').innerHTML=recordingsList(navState.filters.recordings||'',navState.filters.recPerson||'')});
   live('filter-people','people',()=>{el('people-list').innerHTML=peopleList(navState.filters.people||'')});
   live('filter-advice','advice',()=>{el('advice-list').innerHTML=adviceList(navState.filters.advice||'',navState.filters.advPerson||'');bindSrcButtons()});
-  live('filter-adv-person','advPerson',()=>{el('advice-list').innerHTML=adviceList(navState.filters.advice||'',navState.filters.advPerson||'');bindSrcButtons()});
+  live('filter-tip-person','advPerson',()=>{el('advice-list').innerHTML=adviceList(navState.filters.advice||'',navState.filters.advPerson||'');bindSrcButtons()});
   const tf=el('tr-filter');
   if(tf)tf.oninput=()=>{
     const q=tf.value.trim().toLowerCase();

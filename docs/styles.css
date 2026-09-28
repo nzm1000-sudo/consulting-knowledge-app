@@ -384,14 +384,14 @@ a.row:hover .row-arrow{opacity:1;color:var(--accent)}
 .src-empty{padding:28px 16px;text-align:center;color:var(--muted);font-size:14px}
 
 /* ---------- lists: advice, contradictions ---------- */
-.adv-row{padding:15px 16px;border-bottom:1px solid var(--line-2)}
-.adv-row:last-child{border-bottom:0}
-.adv-text{font-size:15.5px;line-height:1.6;margin:0;font-weight:500}
-.adv-why{font-size:14px;color:var(--ink-2);margin:6px 0 0;line-height:1.6}
-.adv-why b{color:var(--muted);font-weight:600}
-.adv-foot{display:flex;gap:8px 12px;align-items:center;flex-wrap:wrap;margin-top:9px;font-size:12.5px;color:var(--muted)}
-.adv-foot a{color:var(--accent-ink);text-decoration:none;font-weight:600}
-.adv-foot a:hover{text-decoration:underline}
+.tip-row{padding:15px 16px;border-bottom:1px solid var(--line-2)}
+.tip-row:last-child{border-bottom:0}
+.tip-text{font-size:15.5px;line-height:1.6;margin:0;font-weight:500}
+.tip-why{font-size:14px;color:var(--ink-2);margin:6px 0 0;line-height:1.6}
+.tip-why b{color:var(--muted);font-weight:600}
+.tip-foot{display:flex;gap:8px 12px;align-items:center;flex-wrap:wrap;margin-top:9px;font-size:12.5px;color:var(--muted)}
+.tip-foot a{color:var(--accent-ink);text-decoration:none;font-weight:600}
+.tip-foot a:hover{text-decoration:underline}
 .pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
 .pair>div{border:1px solid var(--line);border-radius:var(--r-s);padding:10px 12px;background:var(--surface-2)}
 .pair small{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
