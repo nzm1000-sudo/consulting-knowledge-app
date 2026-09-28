@@ -130,7 +130,7 @@ Response `200`, `Content-Type: application/json`:
 
 ## Speaker labels
 
-The methodology layer (Phase E) works only on labelled speakers. Put each speaker turn on its own line, as `Name: text`, and label the consultant `היועץ` or `הרב`. Unlabelled transcripts still get problems, advice, outcomes and follow-ups.
+The methodology layer (Phase E) works only on labelled speakers. Put each speaker turn on its own line, as `Name: text`, and label the consultant `היועץ` or `הרב`. The consultant is Rabbi Nitzotza Shalom Yosef Barabi: in PLAUD transcripts he appears as `הרב`, as `ניצוצא שלום יוסף ברבי`, and often as `Speaker 1` (sometimes `Speaker 2`). With generic labels the site infers him from explicit advice, and prefers `Speaker 1` only when there is no clear winner. Unlabelled transcripts still get problems, advice, outcomes and follow-ups.
 
 ## Not in this contract
 

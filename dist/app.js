@@ -256,6 +256,8 @@ function analyzeTranscript(text){
     for(const sg of segments)if(sg.speaker&&!/\?\s*$/.test(sg.text)&&isAdviceText(sg.text))hits.set(sg.speaker,(hits.get(sg.speaker)||0)+1);
     const [a,b]=[...hits].sort((x,y)=>y[1]-x[1]);
     if(a&&a[1]>=2&&(!b||a[1]>=b[1]*2)){consultant=a[0];consultantInferred=true}
+    // בלי הכרעה ברורה: ב־PLAUD היועץ מסומן לרוב Speaker 1 (לא תמיד). מעדיפים אותו אם נתן לפחות כמו האחר.
+    else if(hits.get('Speaker 1')>=2&&hits.get('Speaker 1')>=(a?.[0]==='Speaker 1'?(b?.[1]||0):a?.[1]||0)){consultant='Speaker 1';consultantInferred=true}
   }
   const isCons=sp=>!!sp&&(CONSULTANT_RE.test(sp)||sp===consultant);
   const hasConsultant=!!consultant;

@@ -576,4 +576,12 @@ assert(a.answer[0].includes('לא זוהו מהלכי ייעוץ'),'no moves in 
   assert(!app.applyKnowledge(m,{contract:'other',items:[]}),'unknown contract ignored');
 }
 
+// 22. consultant tie-break: Speaker 1 is preferred only when there is no clear winner
+{
+  const tie=app.analyzeTranscript(['Speaker 1: כדאי לך לדבר איתו בנחת השבוע.','Speaker 2: כדאי לך לנסות גם את זה אצלך.','Speaker 1: הייתי ממליץ לך לכתוב לו מכתב קצר.','Speaker 2: אני ממליץ לך לחכות קצת.'].join('\n'));
+  assert.equal(tie.consultant.label,'Speaker 1','tie goes to Speaker 1');
+  const clear=app.analyzeTranscript(['Speaker 2: כדאי לך לדבר איתו בנחת השבוע.','Speaker 2: הייתי ממליץ לך לכתוב לו מכתב קצר.','Speaker 2: אני ממליץ לך לחכות קצת.','Speaker 1: אני חושב שצריך לעשות משהו.'].join('\n'));
+  assert.equal(clear.consultant.label,'Speaker 2','a clear winner is still chosen by content');
+}
+
 console.log('ALL SMOKE TESTS PASSED');
