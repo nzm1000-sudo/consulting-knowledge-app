@@ -550,8 +550,8 @@ function adviceRow({m,a,reason},opts={}){
     ${reason?`<p class="tip-why"><b>למה:</b> ${esc(reason.text)}</p>`:`<p class="tip-why"><b>למה:</b> <span class="muted-note">לא זוהה נימוק מפורש</span></p>`}
     <div class="tip-foot">
       ${opts.noPerson?'':`<a href="#/person/${encodeURIComponent(m.person)}">${esc(m.person)}</a><i class="dot-sep"></i>`}
-      <span>${formatDate(m.date)}</span><i class="dot-sep"></i>
-      <a href="#/case/${esc(m.id)}">${esc(m.title)}</a>
+      ${opts.noMeeting?'':`<span>${formatDate(m.date)}</span><i class="dot-sep"></i>
+      <a href="#/case/${esc(m.id)}">${esc(m.title)}</a>`}
       ${kindTag(a.kind)}
       ${a.evidence?`<button class="link-btn" type="button" data-src-case="${esc(m.id)}" data-src-seg="${a.evidence.seg}">${ic('quote')}ציון מקור</button>`:''}
       <button class="link-btn" type="button" data-ask-open="" data-scope-type="advice" data-scope-id="${esc(m.id+':'+a.id)}">${ic('spark')}שאל על העצה</button>
@@ -1544,17 +1544,33 @@ function personView(name){
 function adviceView(){
   const f=navState.filters.advice||'';
   const person=navState.filters.advPerson||'';
-  return`<p class="section-note">כל עצה עם הנימוק שלה, האדם, ההקלטה והמשפט המקורי.</p>
+  const why=navState.filters.advWhy||'';
+  return`<p class="section-note">העצות מסודרות לפי הקלטה. בכל הקלטה, עצות עם נימוק מופיעות ראשונות. לחיצה על הקלטה פותחת את העצות שלה.</p>
   <div class="page-tools">
     <input id="filter-advice" type="search" value="${esc(f)}" placeholder="סינון עצות" aria-label="סינון עצות">
     <select id="filter-tip-person" aria-label="סינון לפי אדם"><option value="">כל האנשים</option>${allPeople().map(p=>`<option ${p.name===person?'selected':''} value="${esc(p.name)}">${esc(p.name)}</option>`).join('')}</select>
+    <select id="filter-tip-why" aria-label="סינון לפי נימוק"><option value="">כל העצות</option><option value="why" ${why==='why'?'selected':''}>רק עצות עם נימוק</option></select>
   </div>
-  <div class="panel" id="advice-list">${adviceList(f,person)}</div>`;
+  <div id="advice-list">${adviceList(f,person,why)}</div>`;
 }
-function adviceList(f,person){
+// עצות לפי הקלטה: כל הקלטה היא קבוצה נפתחת. בלי סינון הקבוצות סגורות, עם סינון הן פתוחות.
+function adviceList(f,person,why=navState.filters.advWhy||''){
   const q=prepQuery(f);
-  const list=allAdvice().filter(x=>(!person||x.m.person===person)&&(!q.tokens.length||scoreRecord(q,[[x.a.text,1],[x.reason?.text,1],[x.m.title,1],[(x.m.tags||[]).join(' '),1]])>0));
-  return list.length?list.map(x=>adviceRow(x)).join(''):emptyState('לא נמצאו עצות','');
+  const list=allAdvice().filter(x=>(!person||x.m.person===person)&&(!why||x.reason)&&(!q.tokens.length||scoreRecord(q,[[x.a.text,1],[x.reason?.text,1],[x.m.title,1],[(x.m.tags||[]).join(' '),1]])>0));
+  if(!list.length)return`<div class="panel">${emptyState('לא נמצאו עצות','')}</div>`;
+  const groups=new Map();
+  for(const x of list){if(!groups.has(x.m.id))groups.set(x.m.id,{m:x.m,items:[]});groups.get(x.m.id).items.push(x)}
+  const open=q.tokens.length>0||groups.size===1;
+  const head=`<p class="tip-count">${cnt(list.length,'עצה אחת','עצות')} ב־${cnt(groups.size,'הקלטה אחת','הקלטות')}</p>`;
+  return head+[...groups.values()].map(({m,items})=>{
+    items.sort((a,b)=>(b.reason?1:0)-(a.reason?1:0)||(a.a.evidence?.seg??0)-(b.a.evidence?.seg??0));
+    const withWhy=items.filter(x=>x.reason).length;
+    const first=items[0].a.text;
+    return`<details class="tip-group panel"${open?' open':''}>
+      <summary><span class="tip-g-main"><strong>${esc(m.title)}</strong><span class="tip-g-meta">${esc(m.person)} · ${formatDate(m.date)} · ${cnt(items.length,'עצה אחת','עצות')}${withWhy?' · '+cnt(withWhy,'אחת עם נימוק','עם נימוק'):''}</span><span class="tip-g-first">${esc(first.length>110?first.slice(0,110)+'…':first)}</span></span><a class="link-btn tip-g-open" href="#/case/${esc(m.id)}">להקלטה</a></summary>
+      ${items.map(x=>adviceRow(x,{noPerson:true,noMeeting:true})).join('')}
+    </details>`;
+  }).join('');
 }
 
 function contradictionsView(){
@@ -1839,6 +1855,7 @@ function bind(){
   live('filter-people','people',()=>{el('people-list').innerHTML=peopleList(navState.filters.people||'')});
   live('filter-advice','advice',()=>{el('advice-list').innerHTML=adviceList(navState.filters.advice||'',navState.filters.advPerson||'');bindSrcButtons()});
   live('filter-tip-person','advPerson',()=>{el('advice-list').innerHTML=adviceList(navState.filters.advice||'',navState.filters.advPerson||'');bindSrcButtons()});
+  live('filter-tip-why','advWhy',()=>{el('advice-list').innerHTML=adviceList(navState.filters.advice||'',navState.filters.advPerson||'');bindSrcButtons()});
   const tf=el('tr-filter');
   if(tf)tf.oninput=()=>{
     const q=tf.value.trim().toLowerCase();
