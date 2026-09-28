@@ -74,7 +74,7 @@ assert.equal(data.followups.length,6,'seed followups');
 assert.equal(data.meetings[0].id,'m1');
 
 // 2. analysis (v3) applied to all meetings, with evidence integrity
-for(const m of data.meetings)assert(m.analysis&&m.analysis.version===5&&m.analysis.segments.length>0,'analysis for '+m.id);
+for(const m of data.meetings)assert(m.analysis&&m.analysis.version===6&&m.analysis.segments.length>0,'analysis for '+m.id);
 const byId=id=>data.meetings.find(m=>m.id===id).analysis;
 const a1=byId('m1');
 assert(a1.problem&&a1.problem.text.includes('הקושי'),'m1 problem');
@@ -449,6 +449,15 @@ assert(a.answer[0].includes('לא זוהו מהלכי ייעוץ'),'no moves in 
   assert(an.methodology.some(x=>x.subtype==='question'&&x.actor==='consultant'),'full profile name counts as consultant');
   const other=app.analyzeTranscript('דובר 1: מה הכי קשה לך עכשיו?\nדובר 2: הקושי הוא הלחץ בעבודה.');
   assert.equal(other.methodology.length,0,'generic labels are not treated as the consultant');
+}
+
+// 17. advice counts only from the consultant when the consultant is labelled
+{
+  const an=app.analyzeTranscript('הרב: כדאי לך לקבוע שעה קבועה לשיחה.\nדובר 2: אני חושבת שצריך לעשות את זה אחרת.');
+  assert.equal(an.advice.length,1,'client "צריך ל" is not advice');
+  assert(an.advice[0].evidence.speaker==='הרב');
+  const un=app.analyzeTranscript('Speaker 1: כדאי לך לקבוע שעה קבועה לשיחה.\nSpeaker 2: אני חושבת שצריך לעשות את זה אחרת.');
+  assert.equal(un.advice.length,2,'without a consultant label nothing is filtered');
 }
 
 console.log('ALL SMOKE TESTS PASSED');

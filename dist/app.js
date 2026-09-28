@@ -62,7 +62,8 @@ function load(){
 }
 function save(){
   try{localStorage.setItem(storeKey(),JSON.stringify(data))}
-  catch{if(!storageWarned){storageWarned=true;toast('האחסון במכשיר לא זמין. השינויים יישמרו רק עד סגירת הדף.')}}
+  // במצב שרת המאגר גדול מדי לאחסון המקומי, והנתונים נטענים מחדש מהשרת בכל כניסה. אין צורך להתריע.
+  catch{if(SOURCE.mode!=='server'&&!storageWarned){storageWarned=true;toast('האחסון במכשיר לא זמין. השינויים יישמרו רק עד סגירת הדף.')}}
 }
 
 /* ---------- עזרים ---------- */
@@ -153,7 +154,7 @@ let pendingJump=null;
 function persistNav(){ssSet('consultingNav',navState)}
 
 /* ---------- ניתוח מקומי (כללים, פונקציה טהורה) ---------- */
-const ANALYSIS_VERSION=5;
+const ANALYSIS_VERSION=6;
 const ENGINE_LABEL='כללים מקומיים';
 const H={
   contradiction:/(שונה מכלל|חריג|לעומת זאת|לא תמיד|בתנאים מסוימים|יוצא מן הכלל)/,
@@ -232,12 +233,15 @@ function analyzeTranscript(text){
     if(used.has(i))return;used.add(i);
     items.push({id:type+'-'+i,type,text:seg.text,kind,confidence,evidence:{quote:seg.text,time:seg.time,speaker:seg.speaker,seg:i}});
   };
+  // כשהיועץ מסומן בתמליל, עצה והחלטה נספרות רק ממה שהוא אמר. "כדאי" או "צריך ל" בפי הלקוח אינם עצה.
+  const hasConsultant=segments.some(s=>s.speaker&&CONSULTANT_RE.test(s.speaker));
   segments.forEach((seg,i)=>{
     const t=seg.text;
     const question=/\?\s*$/.test(t);
+    const fromClient=hasConsultant&&!!seg.speaker&&!CONSULTANT_RE.test(seg.speaker);
     if(H.contradiction.test(t))push('contradiction',seg,i,'inferred',60);
-    else if(!question&&H.advice.test(t))push('advice',seg,i,'explicit',84);
-    else if(H.decision.test(t))push('decision',seg,i,'explicit',80);
+    else if(!question&&!fromClient&&H.advice.test(t))push('advice',seg,i,'explicit',84);
+    else if(!fromClient&&H.decision.test(t))push('decision',seg,i,'explicit',80);
     else if(H.followup.test(t))push('followup',seg,i,'explicit',78);
     else if(!question&&H.result.test(t))push('result',seg,i,'explicit',72);
     else if(H.outcome.test(t))push('outcome',seg,i,'explicit',74);
