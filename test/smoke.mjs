@@ -402,7 +402,7 @@ assert(a.answer[0].includes('לא זוהו מהלכי ייעוץ'),'no moves in 
     cases:[{id:'k1',title:'אורית · עומס',people:['אורית'],recordingIds:['r1','r2','missing']}],
     followups:[{id:'s1',person:'אורית',title:'לבדוק את שעת הסיום',due:'2026-10-01',recordingId:'r1'}]};
   let calls=0;
-  sandbox.fetch=async(url,opts)=>{calls++;assert.equal(url,'./api/snapshot');assert.equal(opts.cache,'no-store');return{ok:true,status:200,json:async()=>structuredClone(snap)}};
+  sandbox.fetch=async(url,opts)=>{if(url.startsWith('./api/site/'))return{ok:false,status:404};calls++;assert.equal(url,'./api/snapshot');assert.equal(opts.cache,'no-store');return{ok:true,status:200,json:async()=>structuredClone(snap)}};
   assert.equal(await app.connectServer(),'server');
   assert.equal(app.SOURCE.mode,'server');
   assert.equal(app.data.meetings.length,2,'invalid recordings dropped');
@@ -475,6 +475,70 @@ assert(a.answer[0].includes('לא זוהו מהלכי ייעוץ'),'no moves in 
   for(const a of an.advice){const why=r(an,a);if(why)assert.equal(why.evidence.speaker,'Speaker 2','reason from the same speaker')}
   const snap=app.normalizeSnapshot({contract:'nitzotza.snapshot.v1',recordings:[{id:'p1',person:'x',date:'2026-09-01',transcript:'שלום רב.',plaud:'סיכום של PLAUD'}]},null);
   assert.equal(snap.meetings[0].plaud,'סיכום של PLAUD','PLAUD summary carried from the snapshot');
+}
+
+// 19. v2 contract: lightweight list with paging, full detail on open, server search
+{
+  const N=150,PRIV='תוכן-פרטי-מדומה';
+  const rec=i=>({id:'r'+i,title:'הקלטה '+i,date:'2026-0'+(1+i%9)+'-1'+(i%9),person:'לא משויך',hasTranscript:i!==7,hasPlaud:i!==8,snippet:'תקציר '+i});
+  const longPlaud='ניתוח '.repeat(400)+'סוף הניתוח';
+  let listCalls=0,detailCalls=0,lastQ=null;
+  sandbox.fetch=async url=>{
+    const u=new URL(url,'http://nas/');
+    if(u.pathname==='/api/site/recordings'){
+      listCalls++;
+      const q=u.searchParams.get('q');lastQ=q;
+      const off=+u.searchParams.get('offset'),lim=+u.searchParams.get('limit');
+      let all=Array.from({length:N},(_,i)=>rec(i));
+      if(q)all=all.filter(r=>r.id==='r140');
+      const items=all.slice(off,off+lim);
+      if(!q&&off===0)items[0]={...items[0],transcript:PRIV+' גוף שלא אמור להיקלט',plaud:PRIV};
+      return{ok:true,status:200,json:async()=>({contract:'nitzotza.list.v1',total:all.length,offset:off,limit:lim,generatedAt:'2026-09-28T10:00:00Z',items})};
+    }
+    const m=u.pathname.match(/^\/api\/site\/recordings\/(.+)$/);
+    if(m){
+      detailCalls++;const id=decodeURIComponent(m[1]);const i=+id.slice(1);
+      if(i>=N)return{ok:false,status:404};
+      return{ok:true,status:200,json:async()=>({contract:'nitzotza.recording.v1',id,title:'הקלטה '+i,date:rec(i).date,
+        transcript:i===7?'':'[00:01] הרב: כדאי לך לנסות לכתוב לו מכתב קצר.\n[00:10] Speaker 2: בסדר, אני אנסה.',plaud:i===8?'':longPlaud})};
+    }
+    return{ok:false,status:404};
+  };
+  assert.equal(await app.connectServer(),'server');
+  assert.equal(app.SOURCE.api,'list','list API used');
+  const server=app.data.meetings.filter(m=>m.source==='server');
+  assert.equal(server.length,N,'all recordings listed, not only 60');
+  assert.equal(listCalls>=2,true,'paged: more than one list request');
+  const r120=app.data.meetings.find(m=>m.id==='r120');
+  assert(r120,'recording number >60 is discoverable');
+  assert(server.every(m=>!m.transcript&&!m.plaud||m.detailLoaded),'list rows carry no transcript or PLAUD body');
+  assert(!JSON.stringify(app.persistable()).includes(PRIV),'bodies sent by mistake in the list are dropped');
+  // detail on open
+  assert(app.caseView('r120').includes('טוען את ההקלטה'),'loading state before detail');
+  await app.loadDetail('r120');
+  assert(r120.detailLoaded&&r120.transcript.includes('מכתב קצר'),'transcript tab receives transcript_full');
+  assert.equal(r120.plaud,longPlaud,'PLAUD tab receives the full analysis');
+  assert(r120.plaud.length>320&&app.plaudPanel(r120).includes('סוף הניתוח'),'analysis not truncated to 320 chars');
+  assert(app.sourcePanel(r120).includes('מכתב קצר'),'source tab renders transcript_full');
+  assert(r120.analysis.advice.length===1,'extracted knowledge from the opened recording');
+  assert(!JSON.stringify(app.persistable()).includes('מכתב קצר'),'opened content is not written to local storage');
+  // empty states
+  const r7=app.data.meetings.find(m=>m.id==='r7'),r8=app.data.meetings.find(m=>m.id==='r8');
+  await app.loadDetail('r7');await app.loadDetail('r8');
+  assert(app.sourcePanel(r7).includes('אין תמלול מ־PLAUD'),'missing transcript empty state');
+  assert(app.plaudPanel(r8).includes('לא נשמר ניתוח PLAUD'),'missing PLAUD analysis empty state');
+  // server search finds a recording by content beyond the loaded rows
+  const ids=await app.serverSearch('מילה-נדירה');
+  assert.deepEqual([...ids],['r140'],'server-side search');assert.equal(lastQ,'מילה-נדירה');
+  // memory cap on opened recordings
+  for(let i=0;i<app.DETAIL_CAP+10;i++)await app.loadDetail('r'+i);
+  assert(app.detailCount()<=app.DETAIL_CAP,'opened recordings are capped in memory: '+app.detailCount());
+  // no private content in static frontend assets
+  for(const f of ['app.js','index.html','styles.css','sw.js']){
+    const src=readFileSync(new URL('../dist/'+f,import.meta.url),'utf8');
+    assert(!src.includes(PRIV)&&!src.includes('סוף הניתוח'),'no server content in '+f);
+  }
+  assert(app.SEED.meetings.every(m=>/^m\d$/.test(m.id)),'only synthetic seed data in the bundle');
 }
 
 console.log('ALL SMOKE TESTS PASSED');

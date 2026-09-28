@@ -60,8 +60,14 @@ function load(){
     return JSON.parse(localStorage.getItem(LS_KEY))||structuredClone(SEED)
   }catch{return structuredClone(SEED)}
 }
+// במצב שרת נשמרת במכשיר רק הרשימה הקלה. תמלול וניתוח PLAUD לא נשמרים באחסון המקומי.
+function persistable(){
+  if(SOURCE.mode!=='server')return data;
+  return{...data,meetings:data.meetings.map(m=>m.source==='server'?stubOf(m):m)};
+}
+function stubOf(m){const{transcript,plaud,analysis,detailLoaded,...rest}=m;return{...rest,transcript:'',plaud:'',stub:true}}
 function save(){
-  try{localStorage.setItem(storeKey(),JSON.stringify(data))}
+  try{localStorage.setItem(storeKey(),JSON.stringify(persistable()))}
   // במצב שרת המאגר גדול מדי לאחסון המקומי, והנתונים נטענים מחדש מהשרת בכל כניסה. אין צורך להתריע.
   catch{if(SOURCE.mode!=='server'&&!storageWarned){storageWarned=true;toast('האחסון במכשיר לא זמין. השינויים יישמרו רק עד סגירת הדף.')}}
 }
@@ -300,7 +306,7 @@ function ensureAllAnalysis(){
   let changed=false;
   for(const m of data.meetings){
     if(!m.id){m.id='m-'+Date.now()+'-'+Math.floor(Math.random()*1e4);changed=true}
-    if(!m.analysis||m.analysis.version!==ANALYSIS_VERSION){m.analysis=analyzeTranscript(m.transcript);changed=true}
+    if(!m.analysis||m.analysis.version!==ANALYSIS_VERSION){m.analysis=analyzeTranscript(m.transcript);if(!m.stub)changed=true}
   }
   data.principles.forEach((p,i)=>{if(!p.id){p.id='p'+(i+1);changed=true}});
   // מאגר מגרסה קודמת: אין בו תיקים. מוסיפים רק את תיקי הדוגמה שההקלטות שלהם קיימות. לא מאחדים אוטומטית לפי אדם.
@@ -547,7 +553,7 @@ function meetingRow(m){
       <div class="row-meta"><span>${esc(m.person)}</span><i class="dot-sep"></i><span>${formatDate(m.date)}</span>${an.wordCount?`<i class="dot-sep"></i><span>${an.wordCount} מילים</span>`:''}${(m.tags||[]).slice(0,2).map(t=>pill(t)).join('')}</div>
       ${m.summary?`<p class="row-sum">${esc(m.summary)}</p>`:''}
     </div>
-    <div class="row-end"><span class="status-chip ${an.version?'':'pending'}">${an.version?'נותח':'ממתין'}</span><span class="row-arrow">${ic('fwd')}</span></div>
+    <div class="row-end"><span class="status-chip ${m.stub||!an.version?'pending':''}">${m.stub?'נטען בפתיחה':an.version?'נותח':'ממתין'}</span><span class="row-arrow">${ic('fwd')}</span></div>
   </a>`;
 }
 function followRow(f,opts={}){
@@ -1397,7 +1403,13 @@ function recordingsView(){
     <input id="filter-recordings" type="search" value="${esc(f)}" placeholder="סינון לפי כותרת, אדם או תוכן" aria-label="סינון הקלטות">
     <select id="filter-rec-person" aria-label="סינון לפי אדם"><option value="">כל האנשים</option>${people.map(n=>`<option ${n===person?'selected':''} value="${esc(n)}">${esc(n)}</option>`).join('')}</select>
     <button class="button primary" id="inline-import" type="button">${ic('plus')} הקלטה חדשה</button>
-  </div><div id="recordings-list">${recordingsList(f,person)}</div>`;
+  </div><div id="recordings-list">${recordingsList(f,person)}</div><div id="server-rec-results"></div>`;
+}
+function recServerSearch(){
+  const f=navState.filters.recordings||'',person=navState.filters.recPerson||'';
+  const shown=[...document.querySelectorAll?.('#recordings-list [data-case-row]')||[]].map(a=>a.dataset.caseRow);
+  if(person){const b=el('server-rec-results');if(b)b.innerHTML='';return}
+  queueServerSearch(f,'server-rec-results',shown);
 }
 function recordingsList(f,person){
   const q=prepQuery(f);
@@ -1416,10 +1428,12 @@ function recordingsList(f,person){
 function caseView(id){
   const m=data.meetings.find(x=>x.id===id);
   if(!m)return emptyState('ההקלטה לא נמצאה','ייתכן שהקישור השתנה או שההקלטה נמחקה.','חזרה להקלטות','recordings');
+  if(m.stub&&m.source==='server'&&!m.detailError)loadDetail(id).then(()=>{if(parseRoute().key==='case'&&parseRoute().param===id)render()});
   const an=m.analysis||{};
   const tab=navState.caseTab[id]||'knowledge';
   const nItems=(an.problem?1:0)+['observations','reasoning','advice','outcomes','results','followups','contradictions'].reduce((s,k)=>s+(an[k]||[]).length,0);
-  const tabs=[['knowledge','ידע שחולץ',nItems],['source','תמלול מקור',(an.segments||[]).length],['plaud','ניתוח PLAUD',m.plaud?'':'אין']];
+  const wait=m.stub&&!m.detailError;
+  const tabs=[['knowledge','ידע שחולץ',wait?'…':nItems],['source','תמלול מקור',wait?'…':(an.segments||[]).length],['plaud','ניתוח PLAUD',wait?'…':m.plaud?'':'אין']];
   return`<div class="detail">
     <a class="crumb" href="#recordings">${ic('back')} הקלטות</a>
     <header class="d-head">
@@ -1433,8 +1447,15 @@ function caseView(id){
       ${m.summary?`<p class="d-summary">${esc(m.summary)}</p>`:''}
     </header>
     <div class="tabs" role="tablist">${tabs.map(([k,l,n])=>`<button class="tab" role="tab" type="button" aria-selected="${tab===k}" data-case-tab="${k}">${l}${n!==''?` <span class="tab-n">${n}</span>`:''}</button>`).join('')}</div>
-    <div role="tabpanel">${tab==='source'?sourcePanel(m):tab==='plaud'?plaudPanel(m):knowledgePanel(m)}</div>
+    <div role="tabpanel">${m.stub?detailStatePanel(m):tab==='source'?sourcePanel(m):tab==='plaud'?plaudPanel(m):knowledgePanel(m)}</div>
   </div>`;
+}
+function detailStatePanel(m){
+  const msg=m.detailError==='auth'?['נדרשת כניסה לשרת','השרת ביקש סיסמה. רענני את הדף והזיני אותה.']
+    :m.detailError==='missing'?['ההקלטה לא נמצאה בשרת','ייתכן שהיא הוסרה. הרשימה תתעדכן בכניסה הבאה.']
+    :m.detailError?['לא ניתן לטעון את ההקלטה','השרת לא ענה. אפשר לנסות שוב בעוד רגע.']
+    :['טוען את ההקלטה…','התמלול המלא וניתוח PLAUD נטענים מהשרת רק כשפותחים הקלטה.'];
+  return`<div class="panel">${emptyState(msg[0],msg[1])}</div>`;
 }
 function knowledgePanel(m){
   const an=m.analysis||{};
@@ -1466,7 +1487,7 @@ function sourcePanel(m){
     ${segs.map((s,i)=>`<li id="ev-${esc(m.id)}-${i}" class="tr-line ${evSet.has(i)?'tr-ev':''}">
       <span class="tr-meta">${s.time?`<span class="mono" dir="ltr">${esc(s.time)}</span>`:''}${s.speaker?`<span class="tr-speaker">${esc(s.speaker)}</span>`:''}</span>
       <span class="tr-text">${esc(s.text)}</span>
-    </li>`).join('')||'<li class="src-empty">אין תמלול שמור להקלטה זו</li>'}
+    </li>`).join('')||`<li class="src-empty">${m.source==='server'&&m.hasTranscript===false?'אין תמלול מ־PLAUD להקלטה זו':'אין תמלול שמור להקלטה זו'}</li>`}
     </ol>
   </div>`;
 }
@@ -1562,7 +1583,8 @@ function adviceView(){
   const f=navState.filters.advice||'';
   const person=navState.filters.advPerson||'';
   const why=navState.filters.advWhy||'';
-  return`<p class="section-note">העצות מסודרות לפי הקלטה. בכל הקלטה, עצות עם נימוק מופיעות ראשונות. לחיצה על הקלטה פותחת את העצות שלה.</p>
+  const cov=SOURCE.mode==='server'?`<p class="tip-count">מבוסס על ${cnt(detailCount(),'הקלטה אחת','הקלטות')} שנטענו במלואן מתוך ${SOURCE.count}. הקלטה נוספת נכנסת לחשבון כשפותחים אותה.</p>`:'';
+  return`<p class="section-note">העצות מסודרות לפי הקלטה. בכל הקלטה, עצות עם נימוק מופיעות ראשונות. לחיצה על הקלטה פותחת את העצות שלה.</p>${cov}
   <div class="page-tools">
     <input id="filter-advice" type="search" value="${esc(f)}" placeholder="סינון עצות" aria-label="סינון עצות">
     <select id="filter-tip-person" aria-label="סינון לפי אדם"><option value="">כל האנשים</option>${allPeople().map(p=>`<option ${p.name===person?'selected':''} value="${esc(p.name)}">${esc(p.name)}</option>`).join('')}</select>
@@ -1691,7 +1713,7 @@ function searchView(q=''){
   </form>
   <div class="example-row">${examples.map(e=>`<button class="example" type="button" data-query="${esc(e.q)}">${esc(e.label)}</button>`).join('')}</div>
   ${q?`<p class="result-count">${res.total?`${res.total} תוצאות עבור ״${esc(q)}״. החיפוש כולל צורות עם ו/ה/ב/ל ומילים נרדפות.`:'לא נמצאו תוצאות'}</p>
-    ${res.total?groupsHtml:`<div class="panel">${emptyState('לא נמצאו תוצאות','אפשר לנסות מילה אחת מרכזית או את השם המדויק.')}</div>`}`
+    ${res.total?groupsHtml:`<div class="panel">${emptyState('לא נמצאו תוצאות','אפשר לנסות מילה אחת מרכזית או את השם המדויק.')}</div>`}<div id="server-search-results"></div>`
   :`<div class="panel" style="margin-top:18px">${emptyState('חיפוש בכל הידע','אנשים, עצות, נימוקים, תמלולים, ניתוחי PLAUD, עקרונות ומעקבים.')}</div>`}`;
 }
 
@@ -1867,7 +1889,9 @@ function bind(){
   const full=el('full-search');
   if(full)full.onsubmit=e=>{e.preventDefault();lastSearch=String(new FormData(e.target).get('q')||'');saveRecent(lastSearch);render()};
   const live=(id,key,fn,box)=>{const i=el(id);if(i)i.oninput=i.onchange=()=>{navState.filters[key]=i.value;persistNav();fn()}};
-  live('filter-recordings','recordings',()=>{el('recordings-list').innerHTML=recordingsList(navState.filters.recordings||'',navState.filters.recPerson||'')});
+  live('filter-recordings','recordings',()=>{el('recordings-list').innerHTML=recordingsList(navState.filters.recordings||'',navState.filters.recPerson||'');recServerSearch()});
+  if(parseRoute().key==='recordings')recServerSearch();
+  if(parseRoute().key==='search'&&lastSearch)queueServerSearch(lastSearch,'server-search-results',searchAll(lastSearch).groups.meeting.map(g=>g.id));
   live('filter-rec-person','recPerson',()=>{el('recordings-list').innerHTML=recordingsList(navState.filters.recordings||'',navState.filters.recPerson||'')});
   live('filter-people','people',()=>{el('people-list').innerHTML=peopleList(navState.filters.people||'')});
   live('filter-advice','advice',()=>{el('advice-list').innerHTML=adviceList(navState.filters.advice||'',navState.filters.advPerson||'');bindSrcButtons()});
@@ -2330,8 +2354,138 @@ function serverCapable(){
   // GitHub Pages הוא אתר ציבורי סטטי. אין בו שרת, ואין לשלוח ממנו בקשות לנתונים.
   return!/\.github\.io$/i.test(location.hostname);
 }
+/* ---------- רשימה קלה + פרטי הקלטה (חוזה v2) ----------
+   הרשימה מכילה רק נתוני תצוגה. התמלול המלא וניתוח PLAUD נטענים רק כשפותחים הקלטה. */
+const LIST_URL='./api/site/recordings';
+const LIST_CONTRACT='nitzotza.list.v1',DETAIL_CONTRACT='nitzotza.recording.v1';
+const LIST_PAGE=100,PREFETCH_RECENT=40,DETAIL_CAP=80,SNIPPET_MAX=300;
+const detailJobs=new Map(),detailOrder=[];
+const getJSON=async url=>{
+  const res=await fetch(url,{cache:'no-store',credentials:'same-origin',headers:{Accept:'application/json'}});
+  if(res.status===401||res.status===403){const e=new Error('auth');e.status=res.status;throw e}
+  if(!res.ok){const e=new Error('http');e.status=res.status;throw e}
+  return res.json();
+};
+// פריט רשימה → הקלטה חלקית. גוף תמלול או ניתוח שנשלח בטעות ברשימה לא נקלט.
+function listItemToMeeting(r){
+  const id=str(r.id),date=str(r.date).slice(0,10);
+  if(!id||!DAY_RE.test(date))return null;
+  const snip=str(r.snippet||r.summary);
+  return{id,person:str(r.person)||'לא משויך',date,time:str(r.time)||null,duration:typeof r.duration==='number'?r.duration:null,
+    title:str(r.title)||'הקלטה מ־'+formatDate(date),summary:snip.length>SNIPPET_MAX?snip.slice(0,SNIPPET_MAX)+'…':snip,
+    tags:Array.isArray(r.tags)?r.tags.filter(t=>typeof t==='string'):[],plaudFileId:str(r.plaudFileId)||null,
+    status:str(r.status)||null,aiStatus:str(r.aiStatus)||null,hasTranscript:!!r.hasTranscript,hasPlaud:!!r.hasPlaud,
+    transcript:'',plaud:'',stub:true,source:'server'};
+}
+async function fetchAllListPages(){
+  const first=await getJSON(`${LIST_URL}?offset=0&limit=${LIST_PAGE}`);
+  if(!first||first.contract!==LIST_CONTRACT||!Array.isArray(first.items))throw new Error('contract');
+  const items=[...first.items],total=Number.isFinite(first.total)?first.total:items.length;
+  // הדפים נטענים עד שהרשימה מלאה. אין מספר קבוע: המאגר גדל.
+  while(items.length<total){
+    const page=await getJSON(`${LIST_URL}?offset=${items.length}&limit=${LIST_PAGE}`);
+    if(!page||!Array.isArray(page.items)||!page.items.length)break;
+    items.push(...page.items);
+  }
+  return{first,items,total};
+}
+function buildFromList({first,items,total},prev){
+  const prevM=new Map((prev&&Array.isArray(prev.meetings)?prev.meetings:[]).map(m=>[m.id,m]));
+  const meetings=[];
+  for(const r of items){
+    const m=listItemToMeeting(r);if(!m)continue;
+    const old=prevM.get(m.id);
+    // פרטים שכבר נטענו בסשן הזה נשמרים, כדי שלא לטעון שוב.
+    if(old&&old.detailLoaded){Object.assign(m,{transcript:old.transcript,plaud:old.plaud,analysis:old.analysis,stub:false,detailLoaded:true})}
+    meetings.push(m);
+  }
+  for(const m of prevM.values())if(m.source!=='server'&&!meetings.some(x=>x.id===m.id))meetings.push(m);
+  const ids=new Set(meetings.map(m=>m.id));
+  const cases=(Array.isArray(first.cases)?first.cases:[]).map(c=>({id:str(c.id),title:str(c.title),status:str(c.status)||'open',people:Array.isArray(c.people)?c.people.filter(x=>typeof x==='string'):[],recordingIds:(Array.isArray(c.recordingIds)?c.recordingIds:[]).filter(x=>ids.has(x))})).filter(c=>c.id&&c.title);
+  const prevF=new Map((prev&&Array.isArray(prev.followups)?prev.followups:[]).map(f=>[f.id,f]));
+  const followups=(Array.isArray(first.followups)?first.followups:[]).map(f=>({id:str(f.id),person:str(f.person),title:str(f.title),due:str(f.due).slice(0,10),done:!!f.done||!!prevF.get(str(f.id))?.done,meetingId:str(f.recordingId)||undefined})).filter(f=>f.id&&f.person&&f.title&&DAY_RE.test(f.due));
+  const serverF=new Set(followups.map(f=>f.id));
+  for(const f of prevF.values())if(f.local&&!serverF.has(f.id))followups.push(f);
+  return{meetings,followups,cases,people:prev?.people||[],principles:prev?.principles||[],seedVersion:SEED.seedVersion,generatedAt:str(first.generatedAt)||null,total};
+}
+function applyDetail(m,d){
+  if(!d||d.contract!==DETAIL_CONTRACT||str(d.id)!==m.id)throw new Error('contract');
+  m.transcript=typeof d.transcript==='string'?d.transcript:'';
+  m.plaud=typeof d.plaud==='string'?d.plaud:'';
+  m.hasTranscript=!!m.transcript.trim();m.hasPlaud=!!m.plaud.trim();
+  for(const k of ['title','summary','time','status','aiStatus','plaudFileId'])if(typeof d[k]==='string'&&d[k].trim())m[k]=d[k].trim();
+  if(typeof d.duration==='number')m.duration=d.duration;
+  m.analysis=analyzeTranscript(m.transcript);
+  m.stub=false;m.detailLoaded=true;m.detailError=null;
+  // מגבלת זיכרון: רק ההקלטות האחרונות שנפתחו נשמרות במלואן.
+  const i=detailOrder.indexOf(m.id);if(i>=0)detailOrder.splice(i,1);detailOrder.push(m.id);
+  while(detailOrder.length>DETAIL_CAP){const oid=detailOrder.shift(),old=data.meetings.find(x=>x.id===oid);if(old&&old.id!==m.id)Object.assign(old,{transcript:'',plaud:'',analysis:analyzeTranscript(''),stub:true,detailLoaded:false})}
+}
+function loadDetail(id){
+  const m=data.meetings.find(x=>x.id===id);
+  if(!m||!m.stub||m.source!=='server')return Promise.resolve(m);
+  if(detailJobs.has(id))return detailJobs.get(id);
+  const job=getJSON(`${LIST_URL}/${encodeURIComponent(id)}`)
+    .then(d=>{applyDetail(m,d);return m})
+    .catch(e=>{m.detailError=e.status===401||e.status===403?'auth':e.status===404?'missing':'error';return m})
+    .finally(()=>detailJobs.delete(id));
+  detailJobs.set(id,job);
+  return job;
+}
+function detailCount(){return data.meetings.filter(m=>m.source==='server'&&m.detailLoaded).length}
+// טעינה ברקע של ההקלטות האחרונות, אחת אחרי השנייה, כדי שדפי הידע יעבדו. השאר נטענות בפתיחה.
+async function prefetchRecent(n=PREFETCH_RECENT){
+  const recent=data.meetings.filter(m=>m.source==='server'&&m.stub&&m.hasTranscript).sort(byDateDesc).slice(0,n);
+  for(const m of recent){await loadDetail(m.id);if(SOURCE.mode!=='server')return}
+  softRender();
+}
+function softRender(){
+  const a=document.activeElement;
+  if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName||''))return;
+  if(typeof el==='function'&&el('ask-dialog')?.open)return;
+  render();
+}
+// חיפוש בשרת: מוצא הקלטות לפי תוכן גם כשהתמלול שלהן לא נטען לדפדפן.
+const serverSearchCache=new Map();
+async function serverSearch(q){
+  q=String(q||'').trim();if(!q||SOURCE.mode!=='server')return[];
+  if(serverSearchCache.has(q))return serverSearchCache.get(q);
+  try{
+    const r=await getJSON(`${LIST_URL}?q=${encodeURIComponent(q)}&offset=0&limit=50`);
+    const ids=(Array.isArray(r.items)?r.items:[]).map(it=>{const m=listItemToMeeting(it);if(m&&!data.meetings.some(x=>x.id===m.id))data.meetings.push(m);return m?.id}).filter(Boolean);
+    serverSearchCache.set(q,ids);if(serverSearchCache.size>30)serverSearchCache.delete(serverSearchCache.keys().next().value);
+    return ids;
+  }catch{return[]}
+}
+let serverSearchTimer=null;
+function queueServerSearch(q,boxId,excludeIds){
+  clearTimeout(serverSearchTimer);
+  const box=el(boxId);if(!box)return;
+  if(SOURCE.mode!=='server'||!String(q||'').trim()){box.innerHTML='';return}
+  box.innerHTML='<p class="tip-count">מחפש גם בתוכן כל ההקלטות בשרת…</p>';
+  serverSearchTimer=setTimeout(async()=>{
+    const ids=await serverSearch(q);const b=el(boxId);if(!b)return;
+    const ex=new Set(excludeIds||[]);
+    const extra=ids.map(id=>data.meetings.find(m=>m.id===id)).filter(m=>m&&!ex.has(m.id));
+    b.innerHTML=extra.length?`<h2 class="month-sep">נמצא גם בתוכן ההקלטות (חיפוש בשרת)</h2><div class="panel">${extra.map(meetingRow).join('')}</div>`:(ids.length?'':'<p class="tip-count">לא נמצאו התאמות נוספות בשרת.</p>');
+  },300);
+}
+
 async function connectServer(){
   if(!serverCapable()){sourceNote();return SOURCE.status}
+  try{
+    const list=await fetchAllListPages();
+    const next=buildFromList(list,SOURCE.mode==='server'?data:null);
+    SOURCE.mode='server';SOURCE.status='server';SOURCE.api='list';SOURCE.generatedAt=next.generatedAt;SOURCE.count=next.meetings.filter(m=>m.source==='server').length;
+    data=next;
+    try{localStorage.setItem(SOURCE_KEY,'server')}catch{}
+    ensureAllAnalysis();save();sourceNote();render();
+    prefetchRecent();
+    return SOURCE.status;
+  }catch(e){
+    if(e&&(e.status===401||e.status===403)){if(SOURCE.mode!=='server')SOURCE.status='auth';sourceNote();return SOURCE.status}
+    // אין ממשק רשימה (404 או חוזה ישן): נופלים לתמונת המצב הישנה.
+  }
   let res;
   try{res=await fetch(SERVER_URL,{cache:'no-store',credentials:'same-origin',headers:{Accept:'application/json'}})}
   catch{sourceNote();return SOURCE.status}
@@ -2339,7 +2493,7 @@ async function connectServer(){
   if(!res.ok){sourceNote();return SOURCE.status}
   try{
     const snap=normalizeSnapshot(await res.json(),SOURCE.mode==='server'?data:null);
-    SOURCE.mode='server';SOURCE.status='server';SOURCE.generatedAt=snap.generatedAt;SOURCE.count=snap.meetings.length;
+    SOURCE.mode='server';SOURCE.status='server';SOURCE.api='snapshot';SOURCE.generatedAt=snap.generatedAt;SOURCE.count=snap.meetings.length;
     data=snap;
     try{localStorage.setItem(SOURCE_KEY,'server')}catch{}
     ensureAllAnalysis();save();
@@ -2381,4 +2535,4 @@ if('serviceWorker'in navigator){
   window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
 /* debug/test hook */
-window.__consulting={reasonFor,normalizeSnapshot,connectServer,SOURCE,serverCapable,detectMethodology,methodPatterns,methodCoverage,methodFocus,METHOD,parseWindow,conceptKeys,recurringConcepts,adviceOutcomes,retrieveEvidence,buildSynthesisRequest,validateSynthesis,allCases,casesOfPerson,casesOfRecording,recordingsOfCase,SYNTHESIS,askSecondBrain,detectIntent,scopeFromRoute,SEED,load,save,analyzeTranscript,splitSegments,searchAll,tokenize,variants,relatedPrinciples,linkedCases,allPeople,allAdvice,adviceChanges,zmanimFor,hebrewDate,gematria,importMeeting,validBackup,get data(){return data},navigate,esc};
+window.__consulting={caseView,plaudPanel,sourcePanel,reasonFor,loadDetail,serverSearch,listItemToMeeting,fetchAllListPages,detailCount,persistable,DETAIL_CAP,normalizeSnapshot,connectServer,SOURCE,serverCapable,detectMethodology,methodPatterns,methodCoverage,methodFocus,METHOD,parseWindow,conceptKeys,recurringConcepts,adviceOutcomes,retrieveEvidence,buildSynthesisRequest,validateSynthesis,allCases,casesOfPerson,casesOfRecording,recordingsOfCase,SYNTHESIS,askSecondBrain,detectIntent,scopeFromRoute,SEED,load,save,analyzeTranscript,splitSegments,searchAll,tokenize,variants,relatedPrinciples,linkedCases,allPeople,allAdvice,adviceChanges,zmanimFor,hebrewDate,gematria,importMeeting,validBackup,get data(){return data},navigate,esc};

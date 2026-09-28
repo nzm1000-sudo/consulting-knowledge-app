@@ -5,7 +5,7 @@ The site runs in two modes:
 | Mode | Where | Data |
 |---|---|---|
 | Local | GitHub Pages, or any host without the API | Synthetic demo data in `localStorage` (`consultingKnowledge`) |
-| Server | The NAS, serving the same static files | A read-only snapshot from `./api/snapshot`, cached in `consultingKnowledge:server` |
+| Server | The NAS, serving the same static files | A lightweight list from `./api/site/recordings` (all recordings, paged); each recording's full text loads when it is opened. Legacy fallback: `./api/snapshot` |
 
 The site never asks for server data when it runs on `*.github.io`, over `file:`, or when `fetch` is missing.
 
@@ -16,6 +16,74 @@ The site never asks for server data when it runs on `*.github.io`, over `file:`,
 - Protect both the static files and the API with a password. On a missing or wrong password, return `401` (the site shows "נדרשת כניסה לשרת").
 - The service worker never caches `/api/` responses.
 - The endpoint is **read-only**: `GET` only. It never calls OpenAI, never starts processing, and never writes to the database.
+
+## v2 (current): lightweight list + detail on open
+
+The site first calls the list API. Only if it answers 404 (or an unknown contract) does the site fall back to the legacy `./api/snapshot` below.
+Paths live under `./api/site/` so they never collide with the older `./api/recordings` routes used by the legacy UI.
+All endpoints: `GET` only, same password as the site, `Cache-Control: no-store`, SELECT only, and never log transcript or analysis bodies.
+
+### `GET ./api/site/recordings?offset=0&limit=100[&q=...]`
+
+```json
+{
+  "contract": "nitzotza.list.v1",
+  "total": 367,
+  "offset": 0,
+  "limit": 100,
+  "generatedAt": "2026-09-28T10:00:00Z",
+  "items": [
+    {
+      "id": "string, stable",
+      "plaudFileId": "string or null",
+      "title": "string",
+      "date": "YYYY-MM-DD",
+      "time": "HH:MM or null",
+      "duration": 2460,
+      "person": "string or null",
+      "status": "processing status or null",
+      "aiStatus": "AI/extraction status or null",
+      "hasTranscript": true,
+      "hasPlaud": true,
+      "snippet": "short summary, at most ~300 characters"
+    }
+  ],
+  "cases": [],
+  "followups": []
+}
+```
+
+- `total` is the count for the query, never a hard-coded number. The site keeps requesting pages (`offset` += items received) until it has `total` items.
+- `limit` up to 100 is enough; the server may cap it.
+- Order: newest first (`date`, then `time`).
+- **Items must not contain `transcript` or the full PLAUD analysis.** The site drops such fields if they appear.
+- `q` (optional): server-side search over title, transcript_full and plaud_analysis_full (for example `ILIKE '%' || $1 || '%'`, or full-text search). Returns matching items in the same shape and `total` = number of matches. The site uses it for recording search, so recordings whose text is not loaded in the browser are still found.
+- `cases` and `followups` (optional) are read from the first page only.
+
+### `GET ./api/site/recordings/:id`
+
+```json
+{
+  "contract": "nitzotza.recording.v1",
+  "id": "string",
+  "plaudFileId": "string or null",
+  "title": "string",
+  "date": "YYYY-MM-DD",
+  "time": "HH:MM or null",
+  "duration": 2460,
+  "status": "string or null",
+  "aiStatus": "string or null",
+  "summary": "string or null",
+  "transcript": "transcript_full, complete, one turn per line as `[mm:ss] Speaker: text`",
+  "plaud": "plaud_analysis_full, complete, not truncated"
+}
+```
+
+- `404` for an unknown id.
+- The site loads this only when a recording is opened, plus the newest ~40 recordings in the background so the knowledge pages have material. At most 80 opened recordings stay in browser memory; none are written to local storage.
+- Tabs: "תמלול מקור" ← `transcript`; "ניתוח PLAUD" ← `plaud`; "ידע שחולץ" ← the site's own analysis of `transcript`.
+
+## Legacy v1
 
 ## `GET ./api/snapshot`
 
