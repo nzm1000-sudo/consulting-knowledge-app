@@ -13,7 +13,7 @@
 import http from 'node:http';
 import https from 'node:https';
 import {createHash} from 'node:crypto';
-import {mkdirSync,existsSync,readFileSync,writeFileSync,chmodSync} from 'node:fs';
+import {mkdirSync,existsSync,readFileSync,writeFileSync,chmodSync,unlinkSync} from 'node:fs';
 import {homedir} from 'node:os';
 import {join} from 'node:path';
 
@@ -29,6 +29,7 @@ const opt={
 };
 if(!opt.pass){console.error('Set NITZOTZA_PASS (the site password) in the environment.');process.exit(2)}
 mkdirSync(opt.out,{recursive:true,mode:0o700});
+const partialDir=join(opt.out,'.partial');mkdirSync(partialDir,{recursive:true,mode:0o700});
 
 // HTTP without the 5-minute header timeout of fetch: a thinking model can take longer.
 function request(url,{method='GET',headers={},body=null}={}){
@@ -124,12 +125,22 @@ for(const r of targets){
     const d=await api(`/api/site/recordings/${encodeURIComponent(r.id)}`);
     const transcript=d.transcript||'';const sha=createHash('sha256').update(transcript).digest('hex');
     if(!opt.force&&existsSync(file)){try{const old=JSON.parse(readFileSync(file,'utf8'));if(old.transcriptSha256===sha&&old.promptVersion===PROMPT_VERSION&&old.model===opt.model){stats.skipped++;continue}}catch{}}
-    const parts=chunks(transcript);const all=[];let consultant='';const s0=Date.now();
-    for(let i=0;i<parts.length;i++){
-      const res=await ask(parts[i],i+1,parts.length);consultant=consultant||res.consultant||'';
-      const base=all.length;
-      for(const it of res.items||[])all.push({...it,adviceIndex:Number.isInteger(it.adviceIndex)&&it.adviceIndex>=0?it.adviceIndex+base:null});
+    const parts=chunks(transcript);const s0=Date.now();
+    console.log(`${r.id.slice(0,8)}: ${parts.length} parts`);
+    // כל קטע נשמר מיד כשהוא מסתיים. אם המחשב קורס, ההרצה הבאה ממשיכה מהקטע הבא.
+    const partialFile=join(partialDir,r.id+'.json');
+    let partial={sha,promptVersion:PROMPT_VERSION,model:opt.model,chunkChars:opt.chunkChars,done:[]};
+    try{const p=JSON.parse(readFileSync(partialFile,'utf8'));if(p.sha===sha&&p.promptVersion===PROMPT_VERSION&&p.model===opt.model&&p.chunkChars===opt.chunkChars)partial=p}catch{}
+    for(let i=partial.done.length;i<parts.length;i++){
+      const c0=Date.now();
+      const res=await ask(parts[i],i+1,parts.length);
+      partial.done.push({consultant:res.consultant||'',items:res.items||[]});
+      writeFileSync(partialFile,JSON.stringify(partial),{mode:0o600});
+      console.log(`  ${r.id.slice(0,8)} part ${i+1}/${parts.length}: ${(res.items||[]).length} items, ${Math.round((Date.now()-c0)/1000)}s`);
     }
+    const all=[];let consultant='';
+    for(const d of partial.done){consultant=consultant||d.consultant;const base=all.length;
+      for(const it of d.items)all.push({...it,adviceIndex:Number.isInteger(it.adviceIndex)&&it.adviceIndex>=0?it.adviceIndex+base:null})}
     // ציטוט חייב להופיע בתוך שורה אחת של התמליל: דובר אחד, בלי לחבר קטעים.
     const lines=transcript.split('\n').map(norm);const seen=new Set();const items=[];let dropped=0;const remap=new Map();
     all.forEach((it,n)=>{
@@ -141,6 +152,7 @@ for(const r of targets){
     for(const it of items)it.adviceIndex=Number.isInteger(it.adviceIndex)&&remap.has(it.adviceIndex)?remap.get(it.adviceIndex):null;
     const out={contract:'nitzotza.knowledge.v1',id:r.id,model:opt.model,promptVersion:PROMPT_VERSION,transcriptSha256:sha,generatedAt:new Date().toISOString(),consultant,seconds:Math.round((Date.now()-s0)/1000),kept:items.length,dropped,items};
     writeFileSync(file,JSON.stringify(out),{mode:0o600});chmodSync(file,0o600);
+    try{unlinkSync(partialFile)}catch{}
     stats.done++;stats.kept+=items.length;stats.dropped+=dropped;
     console.log(`${r.id}: parts ${parts.length}, kept ${items.length}, dropped ${dropped}, ${out.seconds}s`);
   }catch(e){stats.failed++;console.log(`${r.id}: failed (${String(e.message).slice(0,80)})`)}
