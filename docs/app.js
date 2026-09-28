@@ -298,9 +298,20 @@ function ensureAllAnalysis(){
   }
   if(changed)save();
 }
+// נימוק לעצה: נימוק שבתוך משפט העצה, או נימוק נפרד שנאמר עד 3 משפטים ממנה.
+// בהקלטה ארוכה אין לשייך לכל עצה את הנימוק הראשון בהקלטה.
+const REASON_WINDOW=3;
 function reasonFor(an,adv){
   const rs=an.reasoning||[];
-  return rs.find(r=>r.forAdvice===adv.id)||rs.find(r=>!r.forAdvice)||null;
+  const own=rs.find(r=>r.forAdvice===adv.id);if(own)return own;
+  const at=adv.evidence?.seg;if(typeof at!=='number')return null;
+  let best=null,bd=Infinity;
+  for(const r of rs){
+    if(r.forAdvice||typeof r.evidence?.seg!=='number')continue;
+    const d=r.evidence.seg-at,dist=d>0?d:-d+.5; // עדיפות לנימוק שנאמר אחרי העצה
+    if(d!==0&&Math.abs(d)<=REASON_WINDOW&&dist<bd){best=r;bd=dist}
+  }
+  return best;
 }
 
 /* ---------- נגזרות מהנתונים ---------- */
@@ -2331,4 +2342,4 @@ if('serviceWorker'in navigator){
   window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
 /* debug/test hook */
-window.__consulting={normalizeSnapshot,connectServer,SOURCE,serverCapable,detectMethodology,methodPatterns,methodCoverage,methodFocus,METHOD,parseWindow,conceptKeys,recurringConcepts,adviceOutcomes,retrieveEvidence,buildSynthesisRequest,validateSynthesis,allCases,casesOfPerson,casesOfRecording,recordingsOfCase,SYNTHESIS,askSecondBrain,detectIntent,scopeFromRoute,SEED,load,save,analyzeTranscript,splitSegments,searchAll,tokenize,variants,relatedPrinciples,linkedCases,allPeople,allAdvice,adviceChanges,zmanimFor,hebrewDate,gematria,importMeeting,validBackup,get data(){return data},navigate,esc};
+window.__consulting={reasonFor,normalizeSnapshot,connectServer,SOURCE,serverCapable,detectMethodology,methodPatterns,methodCoverage,methodFocus,METHOD,parseWindow,conceptKeys,recurringConcepts,adviceOutcomes,retrieveEvidence,buildSynthesisRequest,validateSynthesis,allCases,casesOfPerson,casesOfRecording,recordingsOfCase,SYNTHESIS,askSecondBrain,detectIntent,scopeFromRoute,SEED,load,save,analyzeTranscript,splitSegments,searchAll,tokenize,variants,relatedPrinciples,linkedCases,allPeople,allAdvice,adviceChanges,zmanimFor,hebrewDate,gematria,importMeeting,validBackup,get data(){return data},navigate,esc};

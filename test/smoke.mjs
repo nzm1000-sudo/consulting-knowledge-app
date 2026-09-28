@@ -432,4 +432,15 @@ assert(a.answer[0].includes('לא זוהו מהלכי ייעוץ'),'no moves in 
   assert.equal(app.data.meetings.length,2,'offline keeps server copy');
 }
 
+// 15. reason pairing stays local in long recordings
+{
+  const filler=Array.from({length:8},(_,i)=>'משפט רקע מספר '+(i+1)+' בלי שום תוכן מיוחד.').join(' ');
+  const an=app.analyzeTranscript('המלצתי לקבוע שעת סיום קבועה בכל יום. '+filler+' המלצתי לצאת להליכה בערב. בגלל שיש לך חשש מזה, אז את מתעסקת בזה.');
+  const [a1,a2]=[...an.advice].sort((x,y)=>x.evidence.seg-y.evidence.seg);
+  assert(a1&&a2,'two advice items');
+  const r=sandbox.window.__consulting.reasonFor;
+  assert.equal(r(an,a1),null,'far reason is not attached to early advice');
+  assert(r(an,a2)&&r(an,a2).text.includes('חשש'),'adjacent reason attached');
+}
+
 console.log('ALL SMOKE TESTS PASSED');
