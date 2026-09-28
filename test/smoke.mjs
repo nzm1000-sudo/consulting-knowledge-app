@@ -74,7 +74,7 @@ assert.equal(data.followups.length,6,'seed followups');
 assert.equal(data.meetings[0].id,'m1');
 
 // 2. analysis (v3) applied to all meetings, with evidence integrity
-for(const m of data.meetings)assert(m.analysis&&m.analysis.version===9&&m.analysis.segments.length>0,'analysis for '+m.id);
+for(const m of data.meetings)assert(m.analysis&&m.analysis.version===10&&m.analysis.segments.length>0,'analysis for '+m.id);
 const byId=id=>data.meetings.find(m=>m.id===id).analysis;
 const a1=byId('m1');
 assert(a1.problem&&a1.problem.text.includes('הקושי'),'m1 problem');
@@ -595,6 +595,30 @@ assert(a.answer[0].includes('לא זוהו מהלכי ייעוץ'),'no moves in 
   assert.equal(split.advice.length,4,'advice under every consultant label is kept');
   const exp=app.analyzeTranscript(['היועץ: הייתי ממליץ לך לכתוב לו מכתב קצר.','Speaker 2: כדאי לי לחשוב על זה.'].join('\n'));
   assert.equal(exp.consultant.label,'היועץ');assert.equal(exp.consultant.inferred,false,'explicit label wins');
+}
+
+// 24. several consultations inside one long recording
+{
+  const L=[];const at=(sec,sp,tx)=>{const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),x=sec%60;L.push(`[${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(x).padStart(2,'0')}] ${sp}: ${tx}`)};
+  // conversation 1: 0-20 min
+  for(let k=0;k<20;k++)at(10+k*60,k%2?'Speaker 2':'Speaker 1',k===5?'הייתי ממליץ לך לכתוב לו מכתב קצר.':'משפט רגיל בשיחה הראשונה מספר '+k+'.');
+  at(20*60+20,'Speaker 1','בשורות טובות, תודה רבה.');
+  // conversation 2 after a short pause, with farewell -> greeting
+  at(20*60+60,'Speaker 1','שלום, מה שלומך היום?');
+  for(let k=0;k<10;k++)at(21*60+k*60,k%2?'Speaker 3':'Speaker 1','משפט בשיחה השנייה מספר '+k+'.');
+  // conversation 3 after a long pause (4 minutes)
+  for(let k=0;k<8;k++)at(35*60+k*60,k%2?'Speaker 4':'Speaker 1','משפט בשיחה השלישית מספר '+k+'.');
+  const an=app.analyzeTranscript(L.join('\n'));
+  assert.equal(an.conversations.length,3,'three consultations found');
+  assert.deepEqual(an.conversations.map(c=>c.n),[1,2,3]);
+  assert(an.conversations[1].speakers.includes('Speaker 3')&&!an.conversations[0].speakers.includes('Speaker 3'),'speakers per conversation');
+  const m={id:'conv1',analysis:an};app.data.meetings.push(m);
+  const html=app.itemHtml(an.advice[0],'conv1');
+  assert(html.includes('שיחה 1'),'item tagged with its conversation');
+  assert(app.convStrip(m).includes('3 שיחות נפרדות'),'conversation strip rendered');
+  app.data.meetings.pop();
+  const single=app.analyzeTranscript(['[00:00:05] Speaker 1: שלום.','[00:01:00] Speaker 2: משפט.','[00:02:00] Speaker 1: עוד משפט.','[00:03:00] Speaker 2: סוף.'].join('\n'));
+  assert.equal(single.conversations.length,0,'a single conversation shows no split');
 }
 
 console.log('ALL SMOKE TESTS PASSED');

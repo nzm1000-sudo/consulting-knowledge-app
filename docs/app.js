@@ -160,7 +160,7 @@ let pendingJump=null;
 function persistNav(){ssSet('consultingNav',navState)}
 
 /* ---------- ניתוח מקומי (כללים, פונקציה טהורה) ---------- */
-const ANALYSIS_VERSION=9;
+const ANALYSIS_VERSION=10;
 const ENGINE_LABEL='כללים מקומיים';
 const H={
   contradiction:/(שונה מכלל|חריג|לעומת זאת|לא תמיד|בתנאים מסוימים|יוצא מן הכלל)/,
@@ -188,7 +188,7 @@ function splitSegments(transcript){
   const lines=String(transcript||'').split(/\n+/).map(l=>l.trim()).filter(Boolean);
   for(const raw of lines){
     let rest=raw,time=null;
-    const tm=rest.match(/^\[(\d{1,2}:\d{2}(?::\d{2})?)\]\s*(.*)$/);
+    const tm=rest.match(/^\[(\d{1,3}:\d{2}(?::\d{2})?)\]\s*(.*)$/);
     if(tm){time=tm[1];rest=tm[2]}
     let speaker=null;
     const sm=rest.match(/^([^:：]{2,25})[:：]\s*(.+)$/);
@@ -240,6 +240,37 @@ function detectMethodology(segments,items){
   });
   return out;
 }
+/* ---------- שיחות בתוך הקלטה ----------
+   הקלטה ארוכה (עד חמש שעות) יכולה להכיל כמה פגישות ברצף, בלי עצירה בין אחת לשנייה.
+   גבול בין שיחות: הפסקה ארוכה בזמן, או ברכת פרידה שאחריה ברכת פתיחה אחרי הפסקה קצרה. */
+const toSec=t=>{if(!t)return null;const p=String(t).split(':').map(Number);if(p.some(isNaN))return null;return p.length===3?p[0]*3600+p[1]*60+p[2]:p[0]*60+p[1]};
+const fmtSec=x=>{const h=Math.floor(x/3600),m=Math.floor(x%3600/60),s=Math.floor(x%60);return(h?h+':'+String(m).padStart(2,'0'):String(m).padStart(2,'0'))+':'+String(s).padStart(2,'0')};
+const FAREWELL=/(בשורות טובות|תודה רבה|להתראות|שיהיה בהצלחה|שתהיה? בריא|כל טוב|בהצלחה רבה|יום טוב|שבוע טוב|תבורכ)/;
+const GREETING=/(^|\s)(שלום|היי|מה שלומ|בוקר טוב|ערב טוב|צהריים טובים|נעים מאוד|שב|תשב|כבוד הרב|הרב)[\s,.!?]/;
+const CONV_GAP=150,CONV_SOFT_GAP=25,CONV_MIN=180;
+function splitConversations(segments){
+  const secs=segments.map(s=>toSec(s.time));
+  if(secs.filter(x=>x!=null).length<4)return[];
+  const starts=[0];let last=null;
+  for(let i=0;i<segments.length;i++){
+    const t=secs[i];if(t==null)continue;
+    if(last!=null&&i>starts[starts.length-1]){
+      const gap=t-last.t;
+      const before=segments.slice(Math.max(0,last.i-2),last.i+1).some(s=>FAREWELL.test(s.text));
+      const after=segments.slice(i,i+3).some(s=>GREETING.test(' '+s.text+' '));
+      if(gap>=CONV_GAP||(gap>=CONV_SOFT_GAP&&before&&after))starts.push(i);
+    }
+    last={i,t};
+  }
+  const convs=starts.map((from,k)=>{const to=(starts[k+1]??segments.length)-1;const ts=secs.slice(from,to+1).filter(x=>x!=null);
+    return{from,to,start:ts.length?ts[0]:null,end:ts.length?ts[ts.length-1]:null,speakers:[...new Set(segments.slice(from,to+1).map(s=>s.speaker).filter(Boolean))]}});
+  // שיחה קצרה מ־3 דקות מצטרפת לקודמת (הפסקה באמצע שיחה, לא שיחה חדשה)
+  const merged=[];for(const c of convs){const prev=merged[merged.length-1];if(prev&&(c.end-c.start)<CONV_MIN){prev.to=c.to;prev.end=c.end;prev.speakers=[...new Set([...prev.speakers,...c.speakers])]}else merged.push(c)}
+  if(merged.length>1&&merged[0].end-merged[0].start<CONV_MIN){merged[1].from=merged[0].from;merged[1].start=merged[0].start;merged.shift()}
+  return merged.length>1?merged.map((c,i)=>({...c,n:i+1,range:fmtSec(c.start)+'–'+fmtSec(c.end)})):[];
+}
+function convOf(an,seg){const cs=an&&an.conversations;if(!cs||!cs.length||typeof seg!=='number')return null;return cs.find(c=>seg>=c.from&&seg<=c.to)||null}
+
 function analyzeTranscript(text){
   const segments=splitSegments(text);
   const items=[];
@@ -320,6 +351,7 @@ function analyzeTranscript(text){
     methodology:detectMethodology(segments,items),
     wordCount:String(text||'').trim().split(/\s+/).filter(Boolean).length,
     timeRange:times.length>=2?times[0]+'–'+times[times.length-1]:null,
+    conversations:splitConversations(segments),
     summary:(by('decision').concat(by('advice'))[0]||problems[0]||segments[0])?.text||''
   };
 }
@@ -541,6 +573,7 @@ function confHtml(c){
   const l=confLabel(c);if(!l)return'';
   return`<span class="conf" title="ביטחון המנוע בזיהוי: ${l.label}">${l.label}<span class="conf-dots" aria-hidden="true">${'<b></b>'.repeat(l.n)}${'<i></i>'.repeat(3-l.n)}</span></span>`;
 }
+function convTag(it,mid){const m=data.meetings.find(x=>x.id===mid);const c=convOf(m&&m.analysis,it.evidence&&it.evidence.seg);return c?`<span class="tag tag-conv">שיחה ${c.n}</span>`:''}
 function aiTag(it){return`<span class="tag tag-ai" title="זוהה על ידי ${esc(it.model||'מודל מקומי')} והציטוט נבדק מול התמליל">ציטוט מאומת · ${esc(it.model||'AI')}</span>`}
 function kindTag(k){return`<span class="tag ${k==='explicit'?'tag-exp':'tag-inf'}">${k==='explicit'?'נאמר במפורש':'הסקה של המערכת'}</span>`}
 function whyHtml(it,mid){
@@ -555,7 +588,7 @@ function itemHtml(it,mid){
   return`<div class="kitem ${it.kind}">
     ${it.summary?`<p class="kitem-sum">${esc(it.summary)}</p>`:''}
     <p class="kitem-text${it.summary?' is-quote':''}">${esc(it.text)}</p>
-    <div class="kitem-foot">${it.subtype&&METHOD[it.subtype]?`<span class="tag tag-pat">${METHOD[it.subtype].label}</span>`:''}${it.source==='ai'?aiTag(it):kindTag(it.kind)}${it.source==='ai'?'':confHtml(it.confidence)}
+    <div class="kitem-foot">${convTag(it,mid)}${it.subtype&&METHOD[it.subtype]?`<span class="tag tag-pat">${METHOD[it.subtype].label}</span>`:''}${it.source==='ai'?aiTag(it):kindTag(it.kind)}${it.source==='ai'?'':confHtml(it.confidence)}
       ${it.evidence?`<button class="link-btn why-btn" type="button" aria-expanded="false" data-why="why-${esc(mid)}-${esc(it.id)}">${ic('quote')}למה?</button>`:''}
     </div>
     ${whyHtml(it,mid)}
@@ -1487,6 +1520,13 @@ function detailStatePanel(m){
     :['טוען את ההקלטה…','התמלול המלא וניתוח PLAUD נטענים מהשרת רק כשפותחים הקלטה.'];
   return`<div class="panel">${emptyState(msg[0],msg[1])}</div>`;
 }
+// רשימת השיחות בתוך הקלטה ארוכה: טווח זמן, דוברים, וכמה עצות בכל שיחה
+function convStrip(m){
+  const an=m.analysis||{},cs=an.conversations||[];if(cs.length<2)return'';
+  const advIn=c=>(an.advice||[]).filter(a=>a.evidence&&a.evidence.seg>=c.from&&a.evidence.seg<=c.to).length;
+  return`<section class="conv-strip" aria-label="שיחות בתוך ההקלטה"><p class="conv-head"><strong>${cs.length} שיחות נפרדות בהקלטה הזו</strong> · זוהו לפי הפסקות וברכות פתיחה ופרידה. כל פריט למטה מסומן בשיחה שלו.</p>
+    <ol class="conv-list">${cs.map(c=>`<li><button class="link-btn" type="button" data-src-case="${esc(m.id)}" data-src-seg="${c.from}"><b>שיחה ${c.n}</b> <span class="mono" dir="ltr">${esc(c.range)}</span></button><span class="conv-meta">${cnt(c.speakers.length,'דובר אחד','דוברים')} · ${cnt(advIn(c),'עצה אחת','עצות')}</span></li>`).join('')}</ol></section>`;
+}
 function knowledgePanel(m){
   const an=m.analysis||{};
   const ks=an.knowledgeSource;
@@ -1508,7 +1548,7 @@ function knowledgePanel(m){
   const noSpeakers=!(an.speakers||[]).length&&empty.includes('מהלכי ייעוץ (מועמדים)');
   // קבוצות ריקות לא תופסות שורה כל אחת: הן מרוכזות בשורה אחת בסוף.
   const emptyLine=empty.length?`<p class="chain-empty"><strong>לא זוהו בהקלטה הזו:</strong> ${empty.map(esc).join(' · ')}${noSpeakers?'. מהלכי ייעוץ מזוהים רק כשהדוברים מסומנים בתמלול.':''}</p>`:'';
-  return`<p class="section-note">${note}</p>
+  return`<p class="section-note">${note}</p>${convStrip(m)}
   <div class="chain">${full.map(([l,items,o])=>stepHtml(l,items,m.id,o)).join('')}</div>${full.length?'':`<div class="panel">${emptyState('לא חולץ ידע מההקלטה הזו','אפשר לעיין בתמלול המקור או בניתוח PLAUD.')}</div>`}${emptyLine}`;
 }
 function sourcePanel(m){
@@ -2609,4 +2649,4 @@ if('serviceWorker'in navigator){
   window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
 /* debug/test hook */
-window.__consulting={applyKnowledge,segIndexFor,itemHtml,adviceRow,caseView,plaudPanel,sourcePanel,reasonFor,loadDetail,serverSearch,listItemToMeeting,fetchAllListPages,detailCount,persistable,DETAIL_CAP,normalizeSnapshot,connectServer,SOURCE,serverCapable,detectMethodology,methodPatterns,methodCoverage,methodFocus,METHOD,parseWindow,conceptKeys,recurringConcepts,adviceOutcomes,retrieveEvidence,buildSynthesisRequest,validateSynthesis,allCases,casesOfPerson,casesOfRecording,recordingsOfCase,SYNTHESIS,askSecondBrain,detectIntent,scopeFromRoute,SEED,load,save,analyzeTranscript,splitSegments,searchAll,tokenize,variants,relatedPrinciples,linkedCases,allPeople,allAdvice,adviceChanges,zmanimFor,hebrewDate,gematria,importMeeting,validBackup,get data(){return data},navigate,esc};
+window.__consulting={splitConversations,convStrip,applyKnowledge,segIndexFor,itemHtml,adviceRow,caseView,plaudPanel,sourcePanel,reasonFor,loadDetail,serverSearch,listItemToMeeting,fetchAllListPages,detailCount,persistable,DETAIL_CAP,normalizeSnapshot,connectServer,SOURCE,serverCapable,detectMethodology,methodPatterns,methodCoverage,methodFocus,METHOD,parseWindow,conceptKeys,recurringConcepts,adviceOutcomes,retrieveEvidence,buildSynthesisRequest,validateSynthesis,allCases,casesOfPerson,casesOfRecording,recordingsOfCase,SYNTHESIS,askSecondBrain,detectIntent,scopeFromRoute,SEED,load,save,analyzeTranscript,splitSegments,searchAll,tokenize,variants,relatedPrinciples,linkedCases,allPeople,allAdvice,adviceChanges,zmanimFor,hebrewDate,gematria,importMeeting,validBackup,get data(){return data},navigate,esc};
