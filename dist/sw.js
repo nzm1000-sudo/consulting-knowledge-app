@@ -1,4 +1,4 @@
-const CACHE = 'consulting-knowledge-v4-3';
+const CACHE = 'consulting-knowledge-v4-4';
 const ASSETS = ['./', './index.html', './styles.css', './app.js', './manifest.webmanifest', './favicon.svg'];
 
 self.addEventListener('install', event => event.waitUntil(
@@ -24,6 +24,8 @@ self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+  // Server data is private and always live: never cached, never served from the offline fallback.
+  if (url.origin === self.location.origin && /\/api\//.test(url.pathname)) return;
   const fonts = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
   if (url.origin === self.location.origin || fonts) event.respondWith(networkFirst(req));
 });

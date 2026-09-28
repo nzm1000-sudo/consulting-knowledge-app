@@ -42,9 +42,26 @@ const SEED = {
 const LS_KEY='consultingKnowledge';
 const BACKUP_KEY='consultingLastBackup';
 let storageWarned=false;
-function load(){try{return JSON.parse(localStorage.getItem(LS_KEY))||structuredClone(SEED)}catch{return structuredClone(SEED)}}
+/* מקור הנתונים: מקומי (דוגמה, localStorage) או שרת (ה־NAS, קריאה בלבד).
+   במצב שרת נשמר עותק נפרד תחת SERVER_KEY, כדי שנתוני השרת לא ידרסו את המאגר המקומי. */
+const SERVER_KEY='consultingKnowledge:server';
+const SOURCE_KEY='consultingSource';
+const SERVER_CONTRACT='nitzotza.snapshot.v1';
+const SERVER_URL='./api/snapshot';
+const SOURCE={mode:'local',status:'local',generatedAt:null,count:0};
+function readSource(){try{return localStorage.getItem(SOURCE_KEY)}catch{return null}}
+function storeKey(){return SOURCE.mode==='server'?SERVER_KEY:LS_KEY}
+function load(){
+  try{
+    if(readSource()==='server'){
+      const c=JSON.parse(localStorage.getItem(SERVER_KEY));
+      if(c&&Array.isArray(c.meetings)){SOURCE.mode='server';SOURCE.status='cached';SOURCE.generatedAt=c.generatedAt||null;SOURCE.count=c.meetings.length;return c}
+    }
+    return JSON.parse(localStorage.getItem(LS_KEY))||structuredClone(SEED)
+  }catch{return structuredClone(SEED)}
+}
 function save(){
-  try{localStorage.setItem(LS_KEY,JSON.stringify(data))}
+  try{localStorage.setItem(storeKey(),JSON.stringify(data))}
   catch{if(!storageWarned){storageWarned=true;toast('האחסון במכשיר לא זמין. השינויים יישמרו רק עד סגירת הדף.')}}
 }
 
@@ -1294,15 +1311,21 @@ function askCard(scope){
 }
 
 /* ---------- מסכים ---------- */
-function homeView(){
-  const open=data.followups.filter(f=>!f.done).sort((a,b)=>(a.due||'9').localeCompare(b.due||'9'));
-  const overdue=open.filter(f=>f.due&&f.due<todayISO()).length;
-  const examples=[
-    {q:'דניאל עצה',label:'מה ייעצתי לדניאל ולמה?'},
+// הצעות חיפוש: בנתוני הדוגמה קבועות. במצב שרת נבנות מהאנשים בהקלטות האחרונות.
+function exampleQueries(ask){
+  if(SOURCE.mode!=='server')return[
+    ask?{q:'דניאל עצה',label:'מה ייעצתי לדניאל ולמה?'}:{q:'דניאל',label:'דניאל'},
     {q:'מריבות בזוגיות',label:'מריבות בזוגיות'},
     {q:'גבולות מול ההורים',label:'גבולות מול ההורים'},
     {q:'פחד לעזוב עבודה',label:'פחד לעזוב עבודה'}
   ];
+  const ppl=[...new Set(data.meetings.slice().sort(byDateDesc).map(m=>m.person))].slice(0,4);
+  return ppl.map((p,i)=>ask&&i===0?{q:p+' עצה',label:'מה ייעצתי ל'+p+' ולמה?'}:{q:p,label:p});
+}
+function homeView(){
+  const open=data.followups.filter(f=>!f.done).sort((a,b)=>(a.due||'9').localeCompare(b.due||'9'));
+  const overdue=open.filter(f=>f.due&&f.due<todayISO()).length;
+  const examples=exampleQueries(true);
   const adv=allAdvice().slice(0,3);
   return`
   <section class="hero">
@@ -1608,7 +1631,7 @@ function followupsView(){
 
 function searchView(q=''){
   const res=searchAll(q);
-  const examples=[{q:'דניאל',label:'דניאל'},{q:'מריבות בזוגיות',label:'מריבות בזוגיות'},{q:'גבולות מול ההורים',label:'גבולות מול ההורים'},{q:'פחד לעזוב עבודה',label:'פחד לעזוב עבודה'}];
+  const examples=exampleQueries(false);
   const groupsHtml=GROUP_ORDER.filter(k=>res.groups[k].length).map(k=>`
     <section class="search-group"><h2>${GROUP_LABEL[k]} <span class="pill">${res.groups[k].length}</span></h2>
       <div class="panel">${res.groups[k].map(it=>`<a class="res-row" href="#/${it.route}"><strong>${esc(it.title)}</strong><div class="res-meta">${it.meta}</div>${it.snippet?`<p class="res-snip">${it.snippet}</p>`:''}</a>`).join('')}</div>
@@ -1814,7 +1837,7 @@ function bind(){
     const fd=new FormData(e.target);
     const title=String(fd.get('title')||'').trim();
     if(!title)return;
-    data.followups.unshift({id:crypto.randomUUID(),person:String(fd.get('person')||''),title,due:String(fd.get('due')||addDays(todayISO(),7)),done:false});
+    data.followups.unshift({id:crypto.randomUUID(),person:String(fd.get('person')||''),title,due:String(fd.get('due')||addDays(todayISO(),7)),done:false,local:true});
     save();toast('המעקב נוסף');render();
   };
 }
@@ -1914,7 +1937,7 @@ function importMeeting({title,person,date,transcript,plaud}){
   const meeting={id:crypto.randomUUID(),title:title||'הקלטה חדשה',person,date,transcript,plaud:plaud||'',summary:analysis.summary,tags,analysis};
   data.meetings.unshift(meeting);
   if(!data.people.some(x=>x.name===person))data.people.unshift({name:person,topic:tags[0]});
-  for(const f of analysis.followups)data.followups.unshift({id:crypto.randomUUID(),person,title:f.text,due:addDays(date,7),done:false,meetingId:meeting.id});
+  for(const f of analysis.followups)data.followups.unshift({id:crypto.randomUUID(),person,title:f.text,due:addDays(date,7),done:false,meetingId:meeting.id,local:true});
   save();
   return meeting;
 }
@@ -2203,11 +2226,76 @@ function bindModelContext(){
     annotations:{readOnlyHint:false,untrustedContentHint:false},
     execute(input){
       if(!input||typeof input.person!=='string'||!input.person.trim()||typeof input.title!=='string'||!input.title.trim()||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(input.due))throw new Error('נתוני המעקב אינם תקינים');
-      const item={id:crypto.randomUUID(),person:input.person.trim(),title:input.title.trim(),due:input.due,done:false};
+      const item={id:crypto.randomUUID(),person:input.person.trim(),title:input.title.trim(),due:input.due,done:false,local:true};
       data.followups.unshift(item);save();navigate('followups');
       return{id:item.id,status:'created'};
     }
   });
+}
+
+/* ---------- חיבור לשרת (NAS) ---------- */
+const DAY_RE=/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
+const str=v=>typeof v==='string'?v.trim():'';
+// ממיר תמונת מצב מהשרת למבנה הנתונים של האתר. זורק שגיאה אם החוזה אינו תואם.
+function normalizeSnapshot(j,prev){
+  if(!j||j.contract!==SERVER_CONTRACT||!Array.isArray(j.recordings))throw new Error('חוזה שרת לא מוכר');
+  const prevM=new Map((prev&&Array.isArray(prev.meetings)?prev.meetings:[]).map(m=>[m.id,m]));
+  const meetings=[];
+  for(const r of j.recordings){
+    const id=str(r.id),person=str(r.person),date=str(r.date).slice(0,10),transcript=typeof r.transcript==='string'?r.transcript:'';
+    if(!id||!person||!DAY_RE.test(date)||!transcript.trim())continue;
+    const m={id,person,date,title:str(r.title)||'הקלטה מ־'+formatDate(date),summary:str(r.summary),transcript,tags:Array.isArray(r.tags)?r.tags.filter(t=>typeof t==='string'):[],source:'server'};
+    const old=prevM.get(id);
+    // אותו תמליל, אותה גרסת ניתוח: לא מנתחים מחדש.
+    if(old&&old.transcript===transcript&&old.analysis&&old.analysis.version===ANALYSIS_VERSION)m.analysis=old.analysis;
+    meetings.push(m);
+  }
+  // הקלטות שיובאו כאן במכשיר (לא מהשרת) נשארות.
+  for(const m of prevM.values())if(m.source!=='server'&&!meetings.some(x=>x.id===m.id))meetings.push(m);
+  const ids=new Set(meetings.map(m=>m.id));
+  const cases=(Array.isArray(j.cases)?j.cases:[]).map(c=>({id:str(c.id),title:str(c.title),status:str(c.status)||'open',people:Array.isArray(c.people)?c.people.filter(x=>typeof x==='string'):[],recordingIds:(Array.isArray(c.recordingIds)?c.recordingIds:[]).filter(x=>ids.has(x))})).filter(c=>c.id&&c.title);
+  // מעקבים: מהשרת, ועוד מעקבים שנוספו כאן במכשיר. סימון "בוצע" מקומי נשמר.
+  const prevF=new Map((prev&&Array.isArray(prev.followups)?prev.followups:[]).map(f=>[f.id,f]));
+  const followups=(Array.isArray(j.followups)?j.followups:[]).map(f=>({id:str(f.id),person:str(f.person),title:str(f.title),due:str(f.due).slice(0,10),done:!!f.done||!!prevF.get(str(f.id))?.done,meetingId:str(f.recordingId)||undefined})).filter(f=>f.id&&f.person&&f.title&&DAY_RE.test(f.due));
+  const serverF=new Set(followups.map(f=>f.id));
+  for(const f of prevF.values())if(f.local&&!serverF.has(f.id))followups.push(f);
+  return{meetings,followups,cases,people:prev&&Array.isArray(prev.people)?prev.people:[],principles:prev&&Array.isArray(prev.principles)?prev.principles:[],seedVersion:SEED.seedVersion,generatedAt:str(j.generatedAt)||null};
+}
+function sourceNote(){
+  const n=el('source-note');if(!n)return;
+  const when=SOURCE.generatedAt?' · עודכן '+formatDate(SOURCE.generatedAt.slice(0,10)):'';
+  const txt={
+    local:['נשמר במכשיר בלבד','גרסת הדגמה עם נתוני דוגמה. אין להזין כאן מידע אמיתי.'],
+    server:['מחובר לשרת','קריאה בלבד מה־NAS. '+cnt(SOURCE.count,'הקלטה אחת','הקלטות')+when+'.'],
+    cached:['השרת לא זמין','מוצג העותק האחרון מהשרת. '+cnt(SOURCE.count,'הקלטה אחת','הקלטות')+when+'.'],
+    auth:['נדרשת כניסה לשרת','השרת ביקש סיסמה. מוצגים נתוני הדוגמה.'],
+    error:['השרת החזיר נתונים לא תקינים','מוצגים הנתונים המקומיים.']
+  }[SOURCE.status]||[];
+  n.dataset.state=SOURCE.status;
+  n.innerHTML='<span class="privacy-dot" aria-hidden="true"></span><div><strong>'+esc(txt[0]||'')+'</strong>'+esc(txt[1]||'')+'</div>';
+}
+function serverCapable(){
+  if(typeof location==='undefined'||typeof fetch!=='function')return false;
+  if(!/^https?:$/.test(location.protocol))return false;
+  // GitHub Pages הוא אתר ציבורי סטטי. אין בו שרת, ואין לשלוח ממנו בקשות לנתונים.
+  return!/\.github\.io$/i.test(location.hostname);
+}
+async function connectServer(){
+  if(!serverCapable()){sourceNote();return SOURCE.status}
+  let res;
+  try{res=await fetch(SERVER_URL,{cache:'no-store',credentials:'same-origin',headers:{Accept:'application/json'}})}
+  catch{sourceNote();return SOURCE.status}
+  if(res.status===401||res.status===403){if(SOURCE.mode!=='server')SOURCE.status='auth';sourceNote();return SOURCE.status}
+  if(!res.ok){sourceNote();return SOURCE.status}
+  try{
+    const snap=normalizeSnapshot(await res.json(),SOURCE.mode==='server'?data:null);
+    SOURCE.mode='server';SOURCE.status='server';SOURCE.generatedAt=snap.generatedAt;SOURCE.count=snap.meetings.length;
+    data=snap;
+    try{localStorage.setItem(SOURCE_KEY,'server')}catch{}
+    ensureAllAnalysis();save();
+    sourceNote();render();
+  }catch{if(SOURCE.mode!=='server')SOURCE.status='error';sourceNote()}
+  return SOURCE.status;
 }
 
 /* ---------- init ---------- */
@@ -2225,6 +2313,8 @@ bindModelContext();
 el('global-search-btn').onclick=openPalette;
 bindAskDialog();
 render();
+sourceNote();
+connectServer();
 window.addEventListener('hashchange',()=>{
   if(currentRouteKey){navState.scroll[currentRouteKey]=window.scrollY||0;persistNav()}
   render();
@@ -2241,4 +2331,4 @@ if('serviceWorker'in navigator){
   window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
 /* debug/test hook */
-window.__consulting={detectMethodology,methodPatterns,methodCoverage,methodFocus,METHOD,parseWindow,conceptKeys,recurringConcepts,adviceOutcomes,retrieveEvidence,buildSynthesisRequest,validateSynthesis,allCases,casesOfPerson,casesOfRecording,recordingsOfCase,SYNTHESIS,askSecondBrain,detectIntent,scopeFromRoute,SEED,load,save,analyzeTranscript,splitSegments,searchAll,tokenize,variants,relatedPrinciples,linkedCases,allPeople,allAdvice,adviceChanges,zmanimFor,hebrewDate,gematria,importMeeting,validBackup,get data(){return data},navigate,esc};
+window.__consulting={normalizeSnapshot,connectServer,SOURCE,serverCapable,detectMethodology,methodPatterns,methodCoverage,methodFocus,METHOD,parseWindow,conceptKeys,recurringConcepts,adviceOutcomes,retrieveEvidence,buildSynthesisRequest,validateSynthesis,allCases,casesOfPerson,casesOfRecording,recordingsOfCase,SYNTHESIS,askSecondBrain,detectIntent,scopeFromRoute,SEED,load,save,analyzeTranscript,splitSegments,searchAll,tokenize,variants,relatedPrinciples,linkedCases,allPeople,allAdvice,adviceChanges,zmanimFor,hebrewDate,gematria,importMeeting,validBackup,get data(){return data},navigate,esc};

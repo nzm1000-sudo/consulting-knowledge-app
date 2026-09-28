@@ -372,4 +372,64 @@ assert(a.answer[0].includes('תצפית מועמדת')&&a.unknowns.some(u=>u.inc
 a=ask('אילו מהלכי ייעוץ התרחשו כאן?',{type:'recording',id:'m1'});
 assert(a.answer[0].includes('לא זוהו מהלכי ייעוץ'),'no moves in an unlabelled recording');
 
+// 14. server data source (NAS, read-only snapshot)
+{
+  assert.equal(app.SOURCE.mode,'local','starts local');
+  assert.equal(app.serverCapable(),false,'no server fetch without http location');
+  windowStub.location.protocol='https:';windowStub.location.hostname='nzm1000-sudo.github.io';
+  sandbox.fetch=()=>{throw new Error('must not fetch on GitHub Pages')};
+  assert.equal(app.serverCapable(),false,'GitHub Pages never asks for server data');
+  assert.equal(await app.connectServer(),'local');
+  windowStub.location.protocol='http:';windowStub.location.hostname='192.168.68.83';
+  // 401: stays local, local store untouched
+  const localBefore=store.consultingKnowledge,nLocal=app.data.meetings.length;
+  sandbox.fetch=async()=>({ok:false,status:401});
+  assert.equal(await app.connectServer(),'auth');
+  assert.equal(app.data.meetings.length,nLocal);
+  // unknown contract: rejected
+  sandbox.fetch=async()=>({ok:true,status:200,json:async()=>({contract:'other',recordings:[]})});
+  assert.equal(await app.connectServer(),'error');
+  assert.equal(app.data.meetings.length,nLocal);
+  assert.throws(()=>app.normalizeSnapshot({contract:'x'}));
+  // valid snapshot
+  const snap={contract:'nitzotza.snapshot.v1',generatedAt:'2026-09-28T08:00:00Z',
+    recordings:[
+      {id:'r1',person:'אורית',date:'2026-09-20',title:'פגישה ראשונה',transcript:'הקושי המרכזי הוא עומס בעבודה. המלצתי לקבוע שעת סיום קבועה בכל יום. בפגישה הבאה נבדוק איך זה עבד.'},
+      {id:'r2',person:'אורית',date:'2026-09-27T10:00:00Z',transcript:'אורית סיפרה שהשעה הקבועה עזרה לה מאוד.'},
+      {id:'bad',person:'',date:'2026-09-01',transcript:'x'},
+      {id:'bad2',person:'מישהו',date:'לא תאריך',transcript:'x'}
+    ],
+    cases:[{id:'k1',title:'אורית · עומס',people:['אורית'],recordingIds:['r1','r2','missing']}],
+    followups:[{id:'s1',person:'אורית',title:'לבדוק את שעת הסיום',due:'2026-10-01',recordingId:'r1'}]};
+  let calls=0;
+  sandbox.fetch=async(url,opts)=>{calls++;assert.equal(url,'./api/snapshot');assert.equal(opts.cache,'no-store');return{ok:true,status:200,json:async()=>structuredClone(snap)}};
+  assert.equal(await app.connectServer(),'server');
+  assert.equal(app.SOURCE.mode,'server');
+  assert.equal(app.data.meetings.length,2,'invalid recordings dropped');
+  assert.equal(app.data.meetings[1].date,'2026-09-27','date trimmed to day');
+  assert(app.data.meetings[1].title.startsWith('הקלטה מ־')&&app.data.meetings[1].title.includes('27'),'fallback title');
+  assert.deepEqual([...app.data.cases[0].recordingIds],['r1','r2'],'unknown recording ids dropped from case');
+  assert(app.data.meetings.every(m=>m.analysis&&m.analysis.version),'server recordings analyzed');
+  assert(app.data.meetings[0].analysis.advice.length>0,'advice detected in server recording');
+  assert.equal(store.consultingKnowledge,localBefore,'local demo store untouched in server mode');
+  assert(store['consultingKnowledge:server'],'server copy cached separately');
+  assert.equal(store.consultingSource,'server');
+  assert(app.searchAll('שעת סיום').total>0,'search works on server data');
+  const a=app.askSecondBrain('מה ייעצתי לאורית?',{type:'global'});
+  assert(a.findings.length>0&&a.evidenceIds.length>0,'assistant answers from server data');
+  // local done flag and local followup survive a re-sync; analysis reused
+  app.data.followups.find(f=>f.id==='s1').done=true;
+  app.data.followups.push({id:'loc',person:'אורית',title:'מקומי',due:'2026-10-02',done:false,local:true});
+  const an=app.data.meetings[0].analysis;
+  await app.connectServer();
+  assert.equal(calls,2);
+  assert(app.data.followups.find(f=>f.id==='s1').done,'local done flag kept');
+  assert(app.data.followups.some(f=>f.id==='loc'),'local followup kept');
+  assert.equal(app.data.meetings[0].analysis,an,'unchanged transcript not re-analyzed');
+  // server down: keep last copy
+  sandbox.fetch=async()=>{throw new Error('offline')};
+  await app.connectServer();
+  assert.equal(app.data.meetings.length,2,'offline keeps server copy');
+}
+
 console.log('ALL SMOKE TESTS PASSED');
