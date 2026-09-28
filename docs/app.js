@@ -160,7 +160,7 @@ let pendingJump=null;
 function persistNav(){ssSet('consultingNav',navState)}
 
 /* ---------- ניתוח מקומי (כללים, פונקציה טהורה) ---------- */
-const ANALYSIS_VERSION=8;
+const ANALYSIS_VERSION=9;
 const ENGINE_LABEL='כללים מקומיים';
 const H={
   contradiction:/(שונה מכלל|חריג|לעומת זאת|לא תמיד|בתנאים מסוימים|יוצא מן הכלל)/,
@@ -249,18 +249,28 @@ function analyzeTranscript(text){
     items.push({id:type+'-'+i,type,text:seg.text,kind,confidence,evidence:{quote:seg.text,time:seg.time,speaker:seg.speaker,seg:i}});
   };
   // כשהיועץ מסומן בתמליל, עצה והחלטה נספרות רק ממה שהוא אמר. "כדאי" או "צריך ל" בפי הלקוח אינם עצה.
-  let consultant=segments.find(s=>s.speaker&&CONSULTANT_RE.test(s.speaker))?.speaker||null,consultantInferred=false;
-  // בלי תווית יועץ (Speaker 1, Speaker 2): היועץ הוא הדובר שנותן הכי הרבה עצות מפורשות, אם הפער ברור.
-  if(!consultant){
+  // מי היועץ. לפי סקר של 367 הקלטות: ב־144 יש רק תווית אחת ("דובר"), כלומר אין הפרדת דוברים;
+  // ובהקלטות ארוכות PLAUD מפצל את אותו אדם ל־5 עד 15 תוויות. לכן:
+  // 1. תווית מפורשת (היועץ, הרב, השם) קובעת. 2. תווית אחת בלבד = אין מידע על דוברים.
+  // 3. עד 3 דוברים: היועץ הוא מי שנותן בבירור הכי הרבה עצות, ובלי הכרעה Speaker 1.
+  // 4. ארבעה דוברים ומעלה: כל התוויות שנותנות עצות רבות נחשבות ליועץ, כי זה כנראה אותו אדם מפוצל.
+  const labels=[...new Set(segments.map(s=>s.speaker).filter(Boolean))];
+  let consSet=new Set(labels.filter(l=>CONSULTANT_RE.test(l))),consultantInferred=false;
+  if(!consSet.size&&labels.length>=2){
     const hits=new Map();
     for(const sg of segments)if(sg.speaker&&!/\?\s*$/.test(sg.text)&&isAdviceText(sg.text))hits.set(sg.speaker,(hits.get(sg.speaker)||0)+1);
     const [a,b]=[...hits].sort((x,y)=>y[1]-x[1]);
-    if(a&&a[1]>=2&&(!b||a[1]>=b[1]*2)){consultant=a[0];consultantInferred=true}
-    // בלי הכרעה ברורה: ב־PLAUD היועץ מסומן לרוב Speaker 1 (לא תמיד). מעדיפים אותו אם נתן לפחות כמו האחר.
-    else if(hits.get('Speaker 1')>=2&&hits.get('Speaker 1')>=(a?.[0]==='Speaker 1'?(b?.[1]||0):a?.[1]||0)){consultant='Speaker 1';consultantInferred=true}
+    if(labels.length<=3){
+      if(a&&a[1]>=2&&(!b||a[1]>=b[1]*2))consSet.add(a[0]);
+      else if(hits.get('Speaker 1')>=2&&hits.get('Speaker 1')>=(a?.[0]==='Speaker 1'?(b?.[1]||0):a?.[1]||0))consSet.add('Speaker 1');
+    }else if(a&&a[1]>=2){
+      for(const [l,n] of hits)if(n>=2&&n>=a[1]*.5)consSet.add(l);
+    }
+    consultantInferred=consSet.size>0;
   }
-  const isCons=sp=>!!sp&&(CONSULTANT_RE.test(sp)||sp===consultant);
-  const hasConsultant=!!consultant;
+  const consultant=consSet.size?[...consSet][0]:null;
+  const isCons=sp=>!!sp&&(CONSULTANT_RE.test(sp)||consSet.has(sp));
+  const hasConsultant=consSet.size>0;
   const seenAdvice=new Set(),normAdv=t=>t.replace(/[^\u0590-\u05FFa-z0-9]+/gi,' ').trim();
   segments.forEach((seg,i)=>{
     const t=seg.text;
@@ -298,7 +308,7 @@ function analyzeTranscript(text){
     version:ANALYSIS_VERSION,
     segments,
     speakers:[...new Set(segments.map(s=>s.speaker).filter(Boolean))],
-    consultant:consultant?{label:consultant,inferred:consultantInferred}:null,
+    consultant:consultant?{label:consultant,labels:[...consSet],inferred:consultantInferred}:null,
     problem:problems[0]||null,
     observations:problems.slice(1).concat(by('observation')).slice(0,6),
     reasoning:by('reasoning'),

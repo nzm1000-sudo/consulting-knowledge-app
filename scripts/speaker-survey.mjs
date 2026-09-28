@@ -38,7 +38,7 @@ for(const it of items){
     for(const l of labels)inc(labelRecs,l);
     inc(combos,[...labels].sort().join(' + ')||'(no labels)');
     const first=an.segments.find(s=>s.speaker)?.speaker;if(first)inc(firstSpeaker,first);
-    if(an.consultant){inc(consultant,an.consultant.label+(an.consultant.inferred?' (inferred)':' (label)'));an.consultant.inferred?inferred++:explicitConsultant++}else none++;
+    if(an.consultant){inc(consultant,(an.consultant.labels||[an.consultant.label]).join(' + ')+(an.consultant.inferred?' (inferred)':' (label)'));an.consultant.inferred?inferred++:explicitConsultant++}else none++;
   }catch{failed++}
   if(++done%50===0)console.log(`...${done}`);
 }

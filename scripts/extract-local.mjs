@@ -17,7 +17,7 @@ import {mkdirSync,existsSync,readFileSync,writeFileSync,chmodSync} from 'node:fs
 import {homedir} from 'node:os';
 import {join} from 'node:path';
 
-const PROMPT_VERSION='k3';
+const PROMPT_VERSION='k4';
 const arg=(k,d)=>{const i=process.argv.indexOf('--'+k);return i>0?(process.argv[i+1]??true):d};
 const opt={
   server:arg('server','http://100.83.186.78:3000').replace(/\/$/,''),
@@ -62,7 +62,7 @@ const SYSTEM=`אתה מנתח שיחות ייעוץ בעברית של רב וי�
 3. advice ו־principle רק מדברי היועץ. problem ו־result בדרך כלל מדברי הפונה.
 4. אם אינך בטוח, אל תכלול. עדיף מעט פריטים נכונים.
 5. summary: תקציר של הפריט בעברית, עד 10 מילים, בלי מידע שלא נאמר.
-6. consultant: תווית הדובר שהוא היועץ, כפי שהיא כתובה בתמליל. היועץ הוא הרב, ניצוצא שלום יוסף ברבי. בתמלילים הוא מסומן לרוב "הרב", בשמו המלא, או Speaker 1, אבל לפעמים Speaker 2. זהה אותו לפי התוכן: מי שמייעץ, מברך ומכוון.
+6. consultant: תווית הדובר שהוא היועץ, כפי שהיא כתובה בתמליל. היועץ הוא הרב, ניצוצא שלום יוסף ברבי. בתמלילים הוא מסומן "היועץ", "הרב", בשמו המלא, או Speaker 1, ולפעמים Speaker 2. בהרבה תמלילים כל השיחה מסומנת "דובר" בלי הפרדה, ובתמלילים ארוכים אותו אדם מפוצל לכמה תוויות Speaker. לכן זהה אותו לפי התוכן: מי שמייעץ, מברך ומכוון, ולא לפי התווית.
 החזר JSON בלבד, לפי המבנה.`;
 // מבנה קשיח: כל השדות חובה, בלי null. adviceIndex = -1 כשאין עצה מקושרת.
 const SCHEMA={type:'object',additionalProperties:false,properties:{consultant:{type:'string'},items:{type:'array',items:{type:'object',additionalProperties:false,properties:{

@@ -74,7 +74,7 @@ assert.equal(data.followups.length,6,'seed followups');
 assert.equal(data.meetings[0].id,'m1');
 
 // 2. analysis (v3) applied to all meetings, with evidence integrity
-for(const m of data.meetings)assert(m.analysis&&m.analysis.version===8&&m.analysis.segments.length>0,'analysis for '+m.id);
+for(const m of data.meetings)assert(m.analysis&&m.analysis.version===9&&m.analysis.segments.length>0,'analysis for '+m.id);
 const byId=id=>data.meetings.find(m=>m.id===id).analysis;
 const a1=byId('m1');
 assert(a1.problem&&a1.problem.text.includes('הקושי'),'m1 problem');
@@ -466,7 +466,7 @@ assert(a.answer[0].includes('לא זוהו מהלכי ייעוץ'),'no moves in 
     'Speaker 2: בגלל שאם תחכי זה רק יחמיר.','Speaker 1: כדאי לי לחשוב על זה עוד קצת.','Speaker 2: תגיד לי, מתי זה התחיל?',
     'Speaker 2: אל תמהר להילחם איתם בשבוע הראשון.','Speaker 1: בגלל שאני פוחדת מהתגובה שלו.','Speaker 2: תנסה לכתוב לו מכתב קצר.'].join('\n');
   const an=app.analyzeTranscript(t);
-  assert.deepEqual(an.consultant,{label:'Speaker 2',inferred:true},'consultant inferred from explicit advice');
+  assert.equal(an.consultant.label,'Speaker 2');assert.equal(an.consultant.inferred,true,'consultant inferred from explicit advice');
   const texts=an.advice.map(a=>a.text);
   assert(texts.some(x=>x.startsWith('כדאי לך'))&&texts.some(x=>x.startsWith('אל תמהר'))&&texts.some(x=>x.startsWith('תנסה')),'direct advice kept');
   assert(!texts.some(x=>x.includes('כדאי לי'))&&!texts.some(x=>x.includes('תגיד לי'))&&!texts.some(x=>x.includes('צריך לעשות')),'noise dropped');
@@ -582,6 +582,19 @@ assert(a.answer[0].includes('לא זוהו מהלכי ייעוץ'),'no moves in 
   assert.equal(tie.consultant.label,'Speaker 1','tie goes to Speaker 1');
   const clear=app.analyzeTranscript(['Speaker 2: כדאי לך לדבר איתו בנחת השבוע.','Speaker 2: הייתי ממליץ לך לכתוב לו מכתב קצר.','Speaker 2: אני ממליץ לך לחכות קצת.','Speaker 1: אני חושב שצריך לעשות משהו.'].join('\n'));
   assert.equal(clear.consultant.label,'Speaker 2','a clear winner is still chosen by content');
+}
+
+// 23. survey findings: a single "דובר" label is no speaker information; over-split speakers are merged
+{
+  const one=app.analyzeTranscript(['דובר: אני חושבת שכדאי לי לחשוב על זה.','דובר: הייתי ממליץ לך לכתוב לו מכתב קצר.'].join('\n'));
+  assert.equal(one.consultant,null,'one label only: no consultant');
+  assert.equal(one.advice.length,1,'advice still found by text when there is no speaker information');
+  const split=app.analyzeTranscript(['Speaker 1: הייתי ממליץ לך לכתוב לו מכתב קצר.','Speaker 2: בסדר, אני אנסה.','Speaker 3: כדאי לך לחכות שבוע לפני שאתה עונה.',
+    'Speaker 1: אני ממליץ לך לדבר איתה בנחת.','Speaker 4: אני חושב שצריך לעשות משהו אחר.','Speaker 3: אני מציע לך לרשום מה הרגשת.'].join('\n'));
+  assert.deepEqual([...split.consultant.labels].sort(),['Speaker 1','Speaker 3'],'over-split consultant labels merged');
+  assert.equal(split.advice.length,4,'advice under every consultant label is kept');
+  const exp=app.analyzeTranscript(['היועץ: הייתי ממליץ לך לכתוב לו מכתב קצר.','Speaker 2: כדאי לי לחשוב על זה.'].join('\n'));
+  assert.equal(exp.consultant.label,'היועץ');assert.equal(exp.consultant.inferred,false,'explicit label wins');
 }
 
 console.log('ALL SMOKE TESTS PASSED');
