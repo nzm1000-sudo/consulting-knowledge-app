@@ -160,14 +160,15 @@ let pendingJump=null;
 function persistNav(){ssSet('consultingNav',navState)}
 
 /* ---------- ניתוח מקומי (כללים, פונקציה טהורה) ---------- */
-const ANALYSIS_VERSION=7;
+const ANALYSIS_VERSION=8;
 const ENGINE_LABEL='כללים מקומיים';
 const H={
   contradiction:/(שונה מכלל|חריג|לעומת זאת|לא תמיד|בתנאים מסוימים|יוצא מן הכלל)/,
   // עצה = המלצה מפורשת או פנייה ישירה לאדם. "כדאי" או "צריך ל" לבדם אינם עצה: בשיחה אמיתית הם מופיעים בכל משפט.
   advice:/(המלצתי|המלצנו|הצעתי|אני מציע(ה)?|אני ממליץ(ה)?|הייתי ממליץ(ה)?|הייתי מציע(ה)?|ממליץ לך|מציע לך|העצה שלי|כדאי (לך|לכם|לכן|לו|לה|שת|שתנסה|שתנסי)|מומלץ (לך|לכם|ש)|מוטב (לך|ש)|(אתה|את|אתם) צריכ(ה|ים)? ל|צריך שת|חשוב שת|נראה לי (שת|שכדאי)|תשתדל(י|ו)?(?=[\s,.!]|$)|תקפיד(י|ו)?(?=[\s,.!]|$))/,
   decision:/(הוחלט|החלטנו|סיכמנו|הסכמנו)/,
-  followup:/(בפגישה הבאה|בפגישה העתידה|נבדוק|לבדוק|מעקב|נחזור (על|ל)?זה|נחזור לזה)/,
+  // מעקב = התחייבות לחזור לנושא. "לבדוק" או "מעקב" לבדם מופיעים בכל שיחה.
+  followup:/(בפגישה הבאה|בפגישה העתידה|בשיחה הבאה|בשבוע הבא נ|(^|\s)נבדוק|נחזור (על|ל)?זה|נחזור לזה|תעדכנ(י|ו)? אותי|נדבר שוב|נקבע (פגישה|שיחה))/,
   result:/(^|[\s,])(עבד|עבדה|עבדו|הצליח|הצליחה|הצליחו|לא הצליח|השתפר|השתפרה|השתפרו|יישם|יישמה|יישמו|עזר|עזרה|לא עזר|כיבד|כיבדה|כיבדו|חיזק|חיזקה)(?=[\s.,!?]|$)/,
   outcome:/(המטרה|התוצאה (הצפויה|הרצויה)|מצפ(ה|ים) ש|הציפייה)/,
   rationale:/(מכיוון|בגלל|הסיבה|שכן|כדי ש|על מנת|הנימוק)/,
@@ -177,6 +178,9 @@ const H={
 // פנייה ישירה בציווי (עתיד גוף שני). "תגיד לי" או "תשמע" אינם עצה.
 const IMPERATIVE=new RegExp('(^|[\\s,])(ו)?('+['תגיד','תסביר','תבקש','תנסה','תעשה','תלך','תדבר','תכתוב','תיקח','תפנה','תחשוב','תבדוק','תתחיל','תפסיק','תחכה','תוותר','תתמקד','תשים לב','אל תמהר','אל תיקח','אל תוותר','אל תיכנס','אל תילחם']
   .flatMap(w=>{const f=w.endsWith('ה')?w.slice(0,-1)+'י':w+'י';const pl=w.endsWith('ה')?w.slice(0,-1)+'ו':w+'ו';return[w,f,pl]}).map(w=>w.replace(/ /g,'\\s')).join('|')+')(?=[\\s,.!]|$)(?!\\s(לי|לנו)(?=[\\s,.!?]|$))');
+// שיחת חולין: ברכות, שלום, תודה ופנייה אישית. משפט ארוך שמכיל גם תוכן לא מסונן.
+const SMALLTALK=/^(היי|שלום|בוקר טוב|ערב טוב|מה שלומ(ך|כם|כן)|מה נשמע|מה השם שלך|איך קוראים לך|נעים מאוד|תודה( רבה)?|חג שמח|שנה טובה|שבוע טוב|שבת שלום|בשורות טובות|תבורכ|ברוך השם|בעזרת השם|אמן)[\s,.!?]*/;
+const isSmallTalk=t=>{const w=t.split(/\s+/).length;if(isAdviceText(t))return false;return(SMALLTALK.test(t)&&w<=7)||(/^(מה שלומ|מה השם|תודה|חג שמח|שנה טובה|בשורות טובות|אוהב אות)/.test(t)&&w<=12)};
 const isAdviceText=t=>(H.advice.test(t)||IMPERATIVE.test(t))&&t.split(/\s+/).length>=4;
 const LABEL_WORDS=new Set(['מטרה','סיכום','תאריך','זמן','נושא','שם','עמודה','סוג','מקור','המלצה','משימה','תוצאה','חריג','החלטה','מעקב']);
 function splitSegments(transcript){
@@ -260,15 +264,20 @@ function analyzeTranscript(text){
     const t=seg.text;
     const question=/\?\s*$/.test(t);
     const fromClient=hasConsultant&&!!seg.speaker&&!isCons(seg.speaker);
-    if(H.contradiction.test(t))push('contradiction',seg,i,'inferred',60);
+    const fromCons=hasConsultant&&!!seg.speaker&&isCons(seg.speaker);
+    const words=t.split(/\s+/).length;
+    // ברכות, פתיחה וסגירה של שיחה, ומשפטים של מילה או שתיים אינם ידע.
+    if(isSmallTalk(t)||words<3)return;
+    if(!question&&words>=5&&H.contradiction.test(t))push('contradiction',seg,i,'inferred',60);
     else if(!question&&!fromClient&&isAdviceText(t)&&!seenAdvice.has(normAdv(t))){seenAdvice.add(normAdv(t));push('advice',seg,i,'explicit',consultantInferred?70:84)}
-    else if(!fromClient&&H.decision.test(t))push('decision',seg,i,'explicit',80);
-    else if(H.followup.test(t))push('followup',seg,i,'explicit',78);
-    else if(!question&&H.result.test(t))push('result',seg,i,'explicit',72);
-    else if(H.outcome.test(t))push('outcome',seg,i,'explicit',74);
-    else if(H.rationale.test(t))push('reasoning',seg,i,'explicit',74);
-    else if(H.problem.test(t))push('problem',seg,i,'explicit',76);
-    else if(H.observation.test(t))push('observation',seg,i,'inferred',64);
+    else if(!question&&!fromClient&&H.decision.test(t))push('decision',seg,i,'explicit',80);
+    else if(!question&&!fromClient&&H.followup.test(t))push('followup',seg,i,'explicit',78);
+    else if(!question&&!fromCons&&H.result.test(t))push('result',seg,i,'explicit',72);
+    else if(!question&&H.outcome.test(t))push('outcome',seg,i,'explicit',74);
+    else if(!question&&words>=4&&H.rationale.test(t))push('reasoning',seg,i,'explicit',74);
+    // הבעיה היא מה שהלקוח מתאר, לא שאלה של היועץ
+    else if(!question&&!fromCons&&words>=4&&H.problem.test(t))push('problem',seg,i,'explicit',76);
+    else if(!question&&words>=4&&H.observation.test(t))push('observation',seg,i,'inferred',64);
     else if(!question&&segments.length<=6)push('observation',seg,i,'inferred',48);
   });
   // נימוק שמוטמע בתוך משפט העצה או ההחלטה
@@ -520,6 +529,7 @@ function confHtml(c){
   const l=confLabel(c);if(!l)return'';
   return`<span class="conf" title="ביטחון המנוע בזיהוי: ${l.label}">${l.label}<span class="conf-dots" aria-hidden="true">${'<b></b>'.repeat(l.n)}${'<i></i>'.repeat(3-l.n)}</span></span>`;
 }
+function aiTag(it){return`<span class="tag tag-ai" title="זוהה על ידי ${esc(it.model||'מודל מקומי')} והציטוט נבדק מול התמליל">ציטוט מאומת · ${esc(it.model||'AI')}</span>`}
 function kindTag(k){return`<span class="tag ${k==='explicit'?'tag-exp':'tag-inf'}">${k==='explicit'?'נאמר במפורש':'הסקה של המערכת'}</span>`}
 function whyHtml(it,mid){
   const ev=it.evidence;if(!ev)return'';
@@ -531,17 +541,24 @@ function whyHtml(it,mid){
 }
 function itemHtml(it,mid){
   return`<div class="kitem ${it.kind}">
-    <p class="kitem-text">${esc(it.text)}</p>
-    <div class="kitem-foot">${it.subtype&&METHOD[it.subtype]?`<span class="tag tag-pat">${METHOD[it.subtype].label}</span>`:''}${kindTag(it.kind)}${confHtml(it.confidence)}
+    ${it.summary?`<p class="kitem-sum">${esc(it.summary)}</p>`:''}
+    <p class="kitem-text${it.summary?' is-quote':''}">${esc(it.text)}</p>
+    <div class="kitem-foot">${it.subtype&&METHOD[it.subtype]?`<span class="tag tag-pat">${METHOD[it.subtype].label}</span>`:''}${it.source==='ai'?aiTag(it):kindTag(it.kind)}${it.source==='ai'?'':confHtml(it.confidence)}
       ${it.evidence?`<button class="link-btn why-btn" type="button" aria-expanded="false" data-why="why-${esc(mid)}-${esc(it.id)}">${ic('quote')}למה?</button>`:''}
     </div>
     ${whyHtml(it,mid)}
   </div>`;
 }
+// רשימה ארוכה מקוצרת ל־5 פריטים, והשאר נפתחים בלחיצה.
+const STEP_SHOW=5;
+function stepItems(items,mid,label){
+  if(items.length<=STEP_SHOW)return items.map(it=>itemHtml(it,mid)).join('');
+  return items.slice(0,STEP_SHOW).map(it=>itemHtml(it,mid)).join('')+`<details class="step-rest"><summary class="link-btn step-more">עוד ${items.length-STEP_SHOW} ב־${esc(label)}</summary><div class="step-body">${items.slice(STEP_SHOW).map(it=>itemHtml(it,mid)).join('')}</div></details>`;
+}
 function stepHtml(label,items,mid,opts={}){
   return`<section class="chain-step ${opts.cls||''} ${opts.cat?'k-'+opts.cat:''}">
     <h3 class="step-label">${label}</h3>
-    <div class="step-body">${items&&items.length?items.map(it=>itemHtml(it,mid)).join(''):`<p class="step-empty">${opts.empty||'לא זוהה בפגישה זו'}</p>`}</div>
+    <div class="step-body">${items&&items.length?stepItems(items,mid,label):`<p class="step-empty">${opts.empty||'לא זוהה בפגישה זו'}</p>`}</div>
   </section>`;
 }
 function meetingRow(m){
@@ -569,13 +586,14 @@ function followRow(f,opts={}){
 }
 function adviceRow({m,a,reason},opts={}){
   return`<div class="tip-row">
-    <p class="tip-text">${esc(a.text)}</p>
+    ${a.summary?`<p class="tip-sum">${esc(a.summary)}</p>`:''}
+    <p class="tip-text${a.summary?' is-quote':''}">${esc(a.text)}</p>
     ${reason?`<p class="tip-why"><b>למה:</b> ${esc(reason.text)}</p>`:`<p class="tip-why"><b>למה:</b> <span class="muted-note">לא זוהה נימוק מפורש</span></p>`}
     <div class="tip-foot">
       ${opts.noPerson?'':`<a href="#/person/${encodeURIComponent(m.person)}">${esc(m.person)}</a><i class="dot-sep"></i>`}
       ${opts.noMeeting?'':`<span>${formatDate(m.date)}</span><i class="dot-sep"></i>
       <a href="#/case/${esc(m.id)}">${esc(m.title)}</a>`}
-      ${kindTag(a.kind)}
+      ${a.source==='ai'?aiTag(a):kindTag(a.kind)}
       ${a.evidence?`<button class="link-btn" type="button" data-src-case="${esc(m.id)}" data-src-seg="${a.evidence.seg}">${ic('quote')}ציון מקור</button>`:''}
       <button class="link-btn" type="button" data-ask-open="" data-scope-type="advice" data-scope-id="${esc(m.id+':'+a.id)}">${ic('spark')}שאל על העצה</button>
     </div>
@@ -1459,7 +1477,10 @@ function detailStatePanel(m){
 }
 function knowledgePanel(m){
   const an=m.analysis||{};
-  return`<p class="section-note">כל פריט נשלף מהתמלול ומקושר למשפט המקורי. „למה?” מציג את המשפט עצמו.</p>
+  const ks=an.knowledgeSource;
+  const note=ks?`זוהה על ידי ${esc(ks.model)}, בינה מלאכותית שרצה אצלך במחשב. כל ציטוט נבדק מול התמליל${ks.dropped?`, ו־${cnt(ks.dropped,'ציטוט אחד שלא נמצא נזרק','ציטוטים שלא נמצאו נזרקו')}`:''}.`
+    :'זוהה בכללים מקומיים. כל פריט נשלף מהתמלול ומקושר למשפט המקורי. „למה?” מציג את המשפט עצמו.';
+  return`<p class="section-note">${note}</p>
   <div class="chain">
     ${stepHtml('הבעיה',an.problem?[an.problem]:[],m.id,{cat:'problem',empty:'לא זוהה ניסוח מפורש של הבעיה'})}
     ${stepHtml('תצפיות',an.observations,m.id,{cat:'observe',empty:'לא זוהו תצפיות'})}
@@ -1469,6 +1490,7 @@ function knowledgePanel(m){
     ${stepHtml('מה קרה בפועל',an.results,m.id,{cat:'result',empty:'לא דווח על תוצאה של עצה קודמת'})}
     ${stepHtml('מעקב',an.followups,m.id,{cat:'follow',empty:'לא נקבע מעקב'})}
     ${stepHtml('חריגים',an.contradictions,m.id,{cat:'except',empty:'לא זוהה חריג'})}
+    ${an.knowledgeSource?stepHtml('עקרונות שנוסחו',an.principles,m.id,{cat:'reason',empty:'לא נוסח עיקרון כללי'}):''}
     ${stepHtml('מהלכי ייעוץ (מועמדים)',an.methodology,m.id,{cat:'reason',empty:(an.speakers||[]).length?'לא זוהה מהלך':'בהקלטה הזו לא מסומנים דוברים, ולכן אי אפשר לזהות מהלכים'})}
   </div>`;
 }
@@ -2374,7 +2396,7 @@ function listItemToMeeting(r){
   return{id,person:str(r.person)||'לא משויך',date,time:str(r.time)||null,duration:typeof r.duration==='number'?r.duration:null,
     title:str(r.title)||'הקלטה מ־'+formatDate(date),summary:snip.length>SNIPPET_MAX?snip.slice(0,SNIPPET_MAX)+'…':snip,
     tags:Array.isArray(r.tags)?r.tags.filter(t=>typeof t==='string'):[],plaudFileId:str(r.plaudFileId)||null,
-    status:str(r.status)||null,aiStatus:str(r.aiStatus)||null,hasTranscript:!!r.hasTranscript,hasPlaud:!!r.hasPlaud,
+    status:str(r.status)||null,aiStatus:str(r.aiStatus)||null,hasTranscript:!!r.hasTranscript,hasPlaud:!!r.hasPlaud,hasKnowledge:!!r.hasKnowledge,
     transcript:'',plaud:'',stub:true,source:'server'};
 }
 async function fetchAllListPages(){
@@ -2415,12 +2437,47 @@ function applyDetail(m,d){
   m.hasTranscript=!!m.transcript.trim();m.hasPlaud=!!m.plaud.trim();
   for(const k of ['title','summary','time','status','aiStatus','plaudFileId'])if(typeof d[k]==='string'&&d[k].trim())m[k]=d[k].trim();
   if(typeof d.duration==='number')m.duration=d.duration;
-  m.analysis=analyzeTranscript(m.transcript);
+  if(!applyKnowledge(m,d.knowledge))m.analysis=analyzeTranscript(m.transcript);
   m.stub=false;m.detailLoaded=true;m.detailError=null;
   // מגבלת זיכרון: רק ההקלטות האחרונות שנפתחו נשמרות במלואן.
   const i=detailOrder.indexOf(m.id);if(i>=0)detailOrder.splice(i,1);detailOrder.push(m.id);
   while(detailOrder.length>DETAIL_CAP){const oid=detailOrder.shift(),old=data.meetings.find(x=>x.id===oid);if(old&&old.id!==m.id)Object.assign(old,{transcript:'',plaud:'',analysis:analyzeTranscript(''),stub:true,detailLoaded:false})}
 }
+/* ---------- ידע שחולץ בבינה מלאכותית מקומית (חוזה nitzotza.knowledge.v1) ----------
+   מופק על ה־Mac (LM Studio) ונשמר ב־NAS בנפרד מהנתונים הקנוניים. האתר לא סומך על המודל:
+   כל ציטוט נבדק מול התמליל מילה במילה. ציטוט שלא נמצא נזרק. */
+const KNOWLEDGE_CONTRACT='nitzotza.knowledge.v1';
+const AI_TYPES={problem:'problem',advice:'advice',reasoning:'reasoning',outcome:'outcome',result:'result',followup:'followup',principle:'principle'};
+const normQ=t=>String(t||'').replace(/[֑-ׇ]/g,'').replace(/[^֐-׿a-z0-9]+/gi,' ').trim();
+function segIndexFor(segs,quote){
+  const q=normQ(quote);if(q.length<6)return -1;
+  const ns=segs.map(sg=>normQ(sg.text));
+  let i=ns.findIndex(x=>x.includes(q));if(i>=0)return i;
+  // ציטוט שחוצה כמה משפטים: מתחיל במשפט אחד וממשיך בבאים
+  for(let k=0;k<ns.length;k++){if(!ns[k]||!q.startsWith(ns[k].slice(0,Math.min(ns[k].length,40))))continue;let acc=ns[k],j=k;while(acc.length<q.length&&j+1<ns.length)acc+=' '+ns[++j];if(acc.includes(q))return k}
+  return -1;
+}
+function applyKnowledge(m,k){
+  if(!k||k.contract!==KNOWLEDGE_CONTRACT||!Array.isArray(k.items))return false;
+  const base=analyzeTranscript(m.transcript),segs=base.segments,full=normQ(m.transcript);
+  const out={problem:[],advice:[],reasoning:[],outcome:[],result:[],followup:[],principle:[]};const advIds=[];let dropped=0;
+  k.items.forEach((it,n)=>{
+    const type=AI_TYPES[it&&it.type];const quote=str(it&&it.quote);
+    if(!type||!quote||!full.includes(normQ(quote))){dropped++;return}
+    const seg=segIndexFor(segs,quote);if(seg<0){dropped++;return}
+    const sg=segs[seg];
+    const item={id:type+'-ai-'+n,type,text:quote,kind:'explicit',confidence:80,source:'ai',model:str(k.model),summary:str(it.summary).slice(0,140)||null,
+      evidence:{quote,time:sg.time,speaker:sg.speaker,seg}};
+    if(type==='advice')advIds[n]=item.id;
+    out[type].push(item);
+  });
+  // נימוק מקושר לעצה שהמודל הצביע עליה, רק אם העצה עצמה עברה אימות
+  for(const r of out.reasoning){const src=k.items[+r.id.split('-ai-')[1]];const ref=Number.isInteger(src?.adviceIndex)?advIds[src.adviceIndex]:null;if(ref)r.forAdvice=ref}
+  m.analysis={...base,problem:out.problem[0]||null,observations:out.problem.slice(1),reasoning:out.reasoning,advice:out.advice,outcomes:out.outcome,results:out.result,followups:out.followup,
+    principles:out.principle,knowledgeSource:{kind:'ai',model:str(k.model)||'מודל מקומי',generatedAt:str(k.generatedAt)||null,dropped,kept:k.items.length-dropped}};
+  return true;
+}
+
 function loadDetail(id){
   const m=data.meetings.find(x=>x.id===id);
   if(!m||!m.stub||m.source!=='server')return Promise.resolve(m);
@@ -2535,4 +2592,4 @@ if('serviceWorker'in navigator){
   window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
 /* debug/test hook */
-window.__consulting={caseView,plaudPanel,sourcePanel,reasonFor,loadDetail,serverSearch,listItemToMeeting,fetchAllListPages,detailCount,persistable,DETAIL_CAP,normalizeSnapshot,connectServer,SOURCE,serverCapable,detectMethodology,methodPatterns,methodCoverage,methodFocus,METHOD,parseWindow,conceptKeys,recurringConcepts,adviceOutcomes,retrieveEvidence,buildSynthesisRequest,validateSynthesis,allCases,casesOfPerson,casesOfRecording,recordingsOfCase,SYNTHESIS,askSecondBrain,detectIntent,scopeFromRoute,SEED,load,save,analyzeTranscript,splitSegments,searchAll,tokenize,variants,relatedPrinciples,linkedCases,allPeople,allAdvice,adviceChanges,zmanimFor,hebrewDate,gematria,importMeeting,validBackup,get data(){return data},navigate,esc};
+window.__consulting={applyKnowledge,segIndexFor,itemHtml,adviceRow,caseView,plaudPanel,sourcePanel,reasonFor,loadDetail,serverSearch,listItemToMeeting,fetchAllListPages,detailCount,persistable,DETAIL_CAP,normalizeSnapshot,connectServer,SOURCE,serverCapable,detectMethodology,methodPatterns,methodCoverage,methodFocus,METHOD,parseWindow,conceptKeys,recurringConcepts,adviceOutcomes,retrieveEvidence,buildSynthesisRequest,validateSynthesis,allCases,casesOfPerson,casesOfRecording,recordingsOfCase,SYNTHESIS,askSecondBrain,detectIntent,scopeFromRoute,SEED,load,save,analyzeTranscript,splitSegments,searchAll,tokenize,variants,relatedPrinciples,linkedCases,allPeople,allAdvice,adviceChanges,zmanimFor,hebrewDate,gematria,importMeeting,validBackup,get data(){return data},navigate,esc};

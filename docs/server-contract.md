@@ -80,6 +80,7 @@ All endpoints: `GET` only, same password as the site, `Cache-Control: no-store`,
 ```
 
 - `404` for an unknown id.
+- Optional `knowledge`: the content of `data/site-knowledge/<id>.json` on the NAS when that file exists (contract `nitzotza.knowledge.v1`, produced on the Mac by `scripts/extract-local.mjs` with a local LM Studio model). The list item then has `"hasKnowledge": true`. The site re-verifies every quote against `transcript` and drops any quote it cannot find. These files are separate from RAW, CLEAN and the database; deleting them returns the site to its rule-based analysis.
 - The site loads this only when a recording is opened, plus the newest ~40 recordings in the background so the knowledge pages have material. At most 80 opened recordings stay in browser memory; none are written to local storage.
 - Tabs: "תמלול מקור" ← `transcript`; "ניתוח PLAUD" ← `plaud`; "ידע שחולץ" ← the site's own analysis of `transcript`.
 
@@ -134,3 +135,24 @@ The methodology layer (Phase E) works only on labelled speakers. Put each speake
 ## Not in this contract
 
 Tier 2 (server-side LLM synthesis, `nitzotza.assistant.v1`) is separate and not enabled. See `assistant-architecture.md`.
+
+
+## `nitzotza.knowledge.v1` (local AI extraction)
+
+```json
+{
+  "contract": "nitzotza.knowledge.v1",
+  "id": "recording id",
+  "model": "dictalm-3.0-24b-thinking",
+  "promptVersion": "k1",
+  "transcriptSha256": "hash of the transcript it was made from",
+  "generatedAt": "ISO time",
+  "consultant": "speaker label of the consultant",
+  "kept": 12, "dropped": 3,
+  "items": [
+    { "type": "problem|advice|reasoning|outcome|result|followup|principle", "quote": "verbatim from the transcript", "summary": "up to 10 words", "adviceIndex": 0 }
+  ]
+}
+```
+
+`quote` is always an exact excerpt; the extractor drops anything it cannot find verbatim, and the site checks again. `summary` is the model's short title and is shown above the quote, never instead of it.

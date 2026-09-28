@@ -74,7 +74,7 @@ assert.equal(data.followups.length,6,'seed followups');
 assert.equal(data.meetings[0].id,'m1');
 
 // 2. analysis (v3) applied to all meetings, with evidence integrity
-for(const m of data.meetings)assert(m.analysis&&m.analysis.version===7&&m.analysis.segments.length>0,'analysis for '+m.id);
+for(const m of data.meetings)assert(m.analysis&&m.analysis.version===8&&m.analysis.segments.length>0,'analysis for '+m.id);
 const byId=id=>data.meetings.find(m=>m.id===id).analysis;
 const a1=byId('m1');
 assert(a1.problem&&a1.problem.text.includes('הקושי'),'m1 problem');
@@ -539,6 +539,41 @@ assert(a.answer[0].includes('לא זוהו מהלכי ייעוץ'),'no moves in 
     assert(!src.includes(PRIV)&&!src.includes('סוף הניתוח'),'no server content in '+f);
   }
   assert(app.SEED.meetings.every(m=>/^m\d$/.test(m.id)),'only synthetic seed data in the bundle');
+}
+
+// 20. small talk, questions and the consultant's questions are not knowledge
+{
+  const an=app.analyzeTranscript(['הרב: מה השם שלך צדיק?','הרב: שלום, חג שמח ומבורך.','Speaker 2: זה גם חריג אצלו, אתה מכיר כזה מקרה?',
+    'הרב: מה יש להבין, הבן אדם פחד להתחייב, מה הבנת?','Speaker 2: הקושי שלי הוא שאני פוחד להתחייב לעבודה חדשה.',
+    'הרב: טוב, אז המלצתי לך לנסות חודש אחד לפני שמחליטים.','Speaker 2: תודה רבה.'].join('\n'));
+  const all=['problem','observations','reasoning','advice','outcomes','results','followups','contradictions'].flatMap(k=>k==='problem'?(an.problem?[an.problem]:[]):an[k]||[]);
+  assert(!all.some(x=>/השם שלך|חג שמח|תודה רבה/.test(x.text)),'small talk dropped');
+  assert(!all.some(x=>/\?\s*$/.test(x.text)),'questions are not knowledge items');
+  assert(an.problem&&an.problem.text.includes('פוחד להתחייב')&&an.problem.evidence.speaker==='Speaker 2','problem comes from the client, not the consultant\'s question');
+  assert(an.advice.some(a=>a.text.includes('המלצתי לך')),'advice starting with "טוב" is kept');
+}
+
+// 21. AI knowledge: every quote verified against the transcript, unverified dropped
+{
+  const m={id:'ai1',person:'x',date:'2026-09-01',title:'t',source:'server',
+    transcript:'[00:01] Speaker 1: אני פוחד להתחייב לעבודה חדשה בגלל המשכנתא.\n[00:20] Speaker 2: הייתי ממליץ לך לנסות חודש אחד לפני שאתה מחליט. כי ככה תדע מה נכון לך באמת.\n[00:40] Speaker 1: בסדר, ננסה.'};
+  const ok=app.applyKnowledge(m,{contract:'nitzotza.knowledge.v1',model:'DictaLM',generatedAt:'2026-09-28',items:[
+    {type:'problem',quote:'אני פוחד להתחייב לעבודה חדשה בגלל המשכנתא'},
+    {type:'advice',quote:'הייתי ממליץ לך לנסות חודש אחד לפני שאתה מחליט',summary:'לנסות חודש לפני החלטה'},
+    {type:'reasoning',quote:'כי ככה תדע מה נכון לך באמת',adviceIndex:1},
+    {type:'advice',quote:'תעזוב את העבודה מחר בבוקר',summary:'המצאה'},
+    {type:'banana',quote:'בסדר, ננסה'}]});
+  assert(ok,'knowledge applied');
+  const an=m.analysis;
+  assert.equal(an.advice.length,1,'invented advice dropped');
+  assert.equal(an.knowledgeSource.dropped,2,'unverified and unknown-type items counted as dropped');
+  assert(an.problem.text.includes('פוחד להתחייב')&&an.problem.evidence.speaker==='Speaker 1','problem mapped to its segment');
+  assert.equal(an.advice[0].evidence.speaker,'Speaker 2');
+  assert.equal(an.reasoning[0].forAdvice,an.advice[0].id,'reason linked to its advice');
+  assert.equal(sandbox.window.__consulting.reasonFor(an,an.advice[0]).text,'כי ככה תדע מה נכון לך באמת');
+  const html=app.itemHtml(an.advice[0],m.id);
+  assert(html.includes('לנסות חודש לפני החלטה')&&html.includes('ציטוט מאומת'),'summary and verified tag rendered');
+  assert(!app.applyKnowledge(m,{contract:'other',items:[]}),'unknown contract ignored');
 }
 
 console.log('ALL SMOKE TESTS PASSED');

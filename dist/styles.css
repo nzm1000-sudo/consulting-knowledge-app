@@ -937,3 +937,39 @@ html,body{overflow-x:clip}
 .tip-g-first{font-size:13.5px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tip-group[open] .tip-g-first{display:none}
 .tip-g-open{flex-shrink:0;font-size:13px}
+
+/* v4.9 · סימטריה, נגישות ונוחות */
+/* שרשרת הידע: הכותרת יושבת מעל הפריטים שלה, באותו קו. בלי עמודה ריקה בין הכותרת לתוכן. */
+.chain{gap:0}
+.chain-step{grid-template-columns:minmax(0,1fr);gap:10px;padding:18px 0}
+.step-label{padding-top:0;font-size:14px;color:var(--ink-2)}
+.step-empty{padding-top:0}
+.step-body{gap:10px}
+.step-more{justify-self:start;font-size:13px}
+/* ניגודיות: צבע הקטגוריה נשאר בנקודה, הטקסט בצבע קריא */
+.step-advice .step-label{color:var(--ink)}
+/* מטרות לחיצה בטלפון: לפחות 36 פיקסלים */
+@media (max-width:700px){
+  .link-btn,.meta-link,.crumb,.see-link,.tip-foot a,.follow-meta a,.tip-g-open{min-height:36px;display:inline-flex;align-items:center}
+  .ctx-list li a,.ctx-dl dd a,.section-head a{display:inline-flex;align-items:center;min-height:36px}
+  .swatch{width:34px;height:34px}
+  .icon-btn{min-width:40px;min-height:40px}
+}
+.step-rest>summary{list-style:none;cursor:pointer}
+.step-rest>summary::-webkit-details-marker{display:none}
+.step-rest[open]>summary{margin-bottom:10px}
+@media (max-width:700px){
+  .ctx-card h2 a,.delta-item a,small>a,.chg-meta a,.pair a{display:inline-flex;align-items:center;min-height:36px}
+}
+/* כותרת הסרגל העליון בשורה אחת. text-wrap:balance משותף לכותרות דרס את nowrap. */
+.topbar-id{flex:1 1 auto}
+.topbar-id h1{text-wrap:nowrap;white-space:nowrap}
+@media (min-width:901px){
+  .topbar-id{min-width:min(38%,340px)}
+  .topbar-actions{min-width:0;flex-shrink:1}
+  .topbar-actions .search-field{flex:0 1 300px;min-width:120px}
+}
+/* v4.9 · ידע מבינה מלאכותית מקומית */
+.kitem-sum,.tip-sum{margin:0 0 6px;font-size:15.5px;font-weight:600;line-height:1.5;color:var(--ink)}
+.kitem-text.is-quote,.tip-text.is-quote{font-size:14px;font-weight:400;color:var(--ink-2);border-inline-start:2px solid var(--line);padding-inline-start:10px}
+.tag-ai{background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent-ink);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)}
