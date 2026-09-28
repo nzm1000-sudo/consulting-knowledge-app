@@ -443,4 +443,12 @@ assert(a.answer[0].includes('לא זוהו מהלכי ייעוץ'),'no moves in 
   assert(r(an,a2)&&r(an,a2).text.includes('חשש'),'adjacent reason attached');
 }
 
+// 16. consultant label from older PLAUD voice profile
+{
+  const an=app.analyzeTranscript('ניצוצא שלום יוסף ברבי: מה הכי קשה לך עכשיו?\nדובר 2: הקושי הוא הלחץ בעבודה.');
+  assert(an.methodology.some(x=>x.subtype==='question'&&x.actor==='consultant'),'full profile name counts as consultant');
+  const other=app.analyzeTranscript('דובר 1: מה הכי קשה לך עכשיו?\nדובר 2: הקושי הוא הלחץ בעבודה.');
+  assert.equal(other.methodology.length,0,'generic labels are not treated as the consultant');
+}
+
 console.log('ALL SMOKE TESTS PASSED');

@@ -188,7 +188,8 @@ function splitSegments(transcript){
    מזהה מהלכי ייעוץ רק בהקלטות שבהן מסומנים דוברים. כל סיווג הוא הסקה (inferred),
    והטקסט הוא המשפט המקורי. שכבת חילוץ מהשרת יכולה להחליף או להשלים את המערך הזה. */
 const METHOD_VERSION='rules-m1';
-const CONSULTANT_RE=/(יועץ|הרב)/;
+// שם היועץ בתמלילי PLAUD: "הרב", ובהקלטות ישנות השם המלא של פרופיל הקול.
+const CONSULTANT_RE=/(יועץ|הרב|ניצוצא|ברבי)/;
 const METHOD={
   question:{label:'שאלה של היועץ',actor:'consultant'},
   reframe:{label:'מסגור מחדש',actor:'consultant',re:/(לא .{1,40}(,? אני שואל|אלא)|במקום ל|תסתכל(י|ו)? על זה|תחשוב(י|ו)? על זה כ|בעצם זה)/},
