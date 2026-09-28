@@ -8,8 +8,8 @@
 // Usage:
 //   NITZOTZA_PASS=... node scripts/extract-local.mjs --limit 3
 //   options: --server http://100.83.186.78:3000  --user nitzotza  --lm http://127.0.0.1:1234
-//            --model dictalm-3.0-24b-thinking  --out ~/nitzotza/knowledge  --limit N  --ids id1,id2
-//            --since YYYY-MM-DD  --force
+//            --model <LM Studio model id>  --out ~/nitzotza/knowledge  --limit N  --ids id1,id2
+//            --since YYYY-MM-DD  --force  --chunk 9000  --max-tokens 8000  --think (allow the model's thinking phase)
 import http from 'node:http';
 import https from 'node:https';
 import {createHash} from 'node:crypto';
@@ -17,7 +17,7 @@ import {mkdirSync,existsSync,readFileSync,writeFileSync,chmodSync} from 'node:fs
 import {homedir} from 'node:os';
 import {join} from 'node:path';
 
-const PROMPT_VERSION='k1';
+const PROMPT_VERSION='k2';
 const arg=(k,d)=>{const i=process.argv.indexOf('--'+k);return i>0?(process.argv[i+1]??true):d};
 const opt={
   server:arg('server','http://100.83.186.78:3000').replace(/\/$/,''),
@@ -25,7 +25,7 @@ const opt={
   lm:arg('lm','http://127.0.0.1:1234').replace(/\/$/,''),model:arg('model','dictalm-3.0-24b-thinking'),
   out:String(arg('out',join(homedir(),'nitzotza','knowledge'))).replace(/^~/,homedir()),
   limit:+arg('limit',0)||0,ids:arg('ids','')?String(arg('ids','')).split(','):null,since:arg('since',''),force:process.argv.includes('--force'),
-  chunkChars:+arg('chunk',18000)||18000
+  chunkChars:+arg('chunk',9000)||9000,maxTokens:+arg('max-tokens',8000)||8000,think:process.argv.includes('--think')
 };
 if(!opt.pass){console.error('Set NITZOTZA_PASS (the site password) in the environment.');process.exit(2)}
 mkdirSync(opt.out,{recursive:true,mode:0o700});
@@ -51,21 +51,22 @@ const SYSTEM=`אתה מנתח שיחות ייעוץ בעברית של רב וי�
 סוגי פריטים:
 - problem: הקושי או השאלה שהפונה מביא, במילים שלו.
 - advice: עצה, המלצה או הנחיה מפורשת של היועץ לפונה.
-- reasoning: הנימוק של היועץ לעצה מסוימת. חובה לציין adviceIndex: מספר הפריט של העצה ברשימה שלך (מתחיל מ־0).
+- reasoning: הנימוק של היועץ לעצה מסוימת. adviceIndex: מספר הפריט של העצה ברשימה שלך (מתחיל מ־0). בכל פריט אחר adviceIndex הוא -1.
 - outcome: מה העצה אמורה להשיג, כפי שנאמר.
 - result: מה קרה בפועל בעקבות עצה קודמת, כפי שהפונה מדווח.
 - followup: התחייבות מפורשת לחזור לנושא או לבדוק אותו בהמשך.
 - principle: עיקרון כללי שהיועץ מנסח, שמתאים גם למקרים אחרים.
 כללים מחייבים:
-1. quote הוא העתקה מדויקת, מילה במילה, של משפט או חלק רציף ממשפט בתמליל. בלי תיקון, בלי קיצור באמצע, בלי חיבור של שני מקומות.
+1. quote הוא העתקה מדויקת, מילה במילה, מתוך שורה אחת בלבד של התמליל (דובר אחד). בלי תיקון, בלי קיצור באמצע, בלי חיבור של שני מקומות או שני דוברים.
 2. אל תכלול: שאלות, ברכות, שלום ותודה, שיחת חולין, סיפורים ודוגמאות שאינם עצה, ציטוטים של אנשים אחרים.
 3. advice ו־principle רק מדברי היועץ. problem ו־result בדרך כלל מדברי הפונה.
 4. אם אינך בטוח, אל תכלול. עדיף מעט פריטים נכונים.
 5. summary: תקציר של הפריט בעברית, עד 10 מילים, בלי מידע שלא נאמר.
 6. consultant: תווית הדובר שהוא היועץ, כפי שהיא כתובה בתמליל.
 החזר JSON בלבד, לפי המבנה.`;
-const SCHEMA={type:'object',properties:{consultant:{type:'string'},items:{type:'array',items:{type:'object',properties:{
-  type:{type:'string',enum:TYPES},quote:{type:'string'},summary:{type:'string'},adviceIndex:{type:['integer','null']}},required:['type','quote','summary']}}},required:['items']};
+// מבנה קשיח: כל השדות חובה, בלי null. adviceIndex = -1 כשאין עצה מקושרת.
+const SCHEMA={type:'object',additionalProperties:false,properties:{consultant:{type:'string'},items:{type:'array',items:{type:'object',additionalProperties:false,properties:{
+  type:{type:'string',enum:TYPES},quote:{type:'string'},summary:{type:'string'},adviceIndex:{type:'integer'}},required:['type','quote','summary','adviceIndex']}}},required:['consultant','items']};
 
 const norm=t=>String(t||'').replace(/[֑-ׇ]/g,'').replace(/[^֐-׿a-z0-9]+/gi,' ').trim();
 function chunks(transcript){
@@ -78,15 +79,26 @@ function parseModelJSON(text){
   const a=t.indexOf('{'),b=t.lastIndexOf('}');if(a<0||b<a)throw new Error('no JSON in model reply');
   return JSON.parse(t.slice(a,b+1));
 }
+let useSchema=true;
 async function ask(chunk,part,parts){
-  const body=JSON.stringify({model:opt.model,temperature:0,max_tokens:24000,
-    messages:[{role:'system',content:SYSTEM},{role:'user',content:`חלק ${part} מתוך ${parts} של התמליל:\n\n${chunk}`}],
-    response_format:{type:'json_schema',json_schema:{name:'knowledge',strict:true,schema:SCHEMA}}});
-  const r=await request(opt.lm+'/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},body});
-  if(r.status!==200)throw new Error(`LM Studio ${r.status}`);
-  const msg=JSON.parse(r.text).choices?.[0]?.message||{};
-  return parseModelJSON(msg.content);
+  // מודלים כמו Qwen מדלגים על שלב החשיבה עם /no_think. זה מהיר פי כמה ומונע חשיבה שממלאת את כל הזיכרון.
+  const user=`חלק ${part} מתוך ${parts} של התמליל:\n\n${chunk}${opt.think?'':'\n\n/no_think'}`;
+  const payload={model:opt.model,temperature:0,max_tokens:opt.maxTokens,messages:[{role:'system',content:SYSTEM},{role:'user',content:user}]};
+  if(useSchema)payload.response_format={type:'json_schema',json_schema:{name:'knowledge',strict:true,schema:SCHEMA}};
+  let r=await request(opt.lm+'/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  if(r.status===400&&useSchema){
+    // השרת לא קיבל את מבנה ה־JSON: ממשיכים בלי, ומפענחים את ה־JSON מהטקסט.
+    useSchema=false;delete payload.response_format;
+    console.log(`note: LM Studio rejected json_schema (${lmError(r.text)}); continuing without it`);
+    r=await request(opt.lm+'/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  }
+  if(r.status!==200)throw new Error(`LM Studio ${r.status}: ${lmError(r.text)}`);
+  const ch=JSON.parse(r.text).choices?.[0]||{};
+  if(ch.finish_reason==='length')throw new Error('model reply cut off (max tokens); try --chunk 6000');
+  return parseModelJSON(ch.message?.content);
 }
+// הודעת השגיאה של LM Studio בלבד, בלי תוכן מהתמליל
+const lmError=t=>{try{const e=JSON.parse(t).error;return String(e?.message||e||'').replace(/[\u0590-\u05FF].*/,'').slice(0,160)}catch{return String(t).replace(/[\u0590-\u05FF].*/,'').slice(0,160)}};
 
 async function listAll(){
   const items=[];let total=Infinity;
@@ -95,6 +107,10 @@ async function listAll(){
 }
 
 const t0=Date.now();
+try{
+  const models=JSON.parse((await request(opt.lm+'/v1/models')).text).data?.map(m=>m.id)||[];
+  if(!models.includes(opt.model)){console.error(`model "${opt.model}" is not loaded in LM Studio. Loaded: ${models.join(', ')||'none'}. Use --model <one of these>.`);process.exit(2)}
+}catch(e){console.error('LM Studio is not reachable at '+opt.lm+'. Start the server in LM Studio (Developer tab).');process.exit(2)}
 let targets=(await listAll()).filter(r=>r.hasTranscript);
 if(opt.ids)targets=targets.filter(r=>opt.ids.includes(r.id));
 if(opt.since)targets=targets.filter(r=>r.date>=opt.since);
@@ -111,12 +127,14 @@ for(const r of targets){
     for(let i=0;i<parts.length;i++){
       const res=await ask(parts[i],i+1,parts.length);consultant=consultant||res.consultant||'';
       const base=all.length;
-      for(const it of res.items||[])all.push({...it,adviceIndex:Number.isInteger(it.adviceIndex)?it.adviceIndex+base:null});
+      for(const it of res.items||[])all.push({...it,adviceIndex:Number.isInteger(it.adviceIndex)&&it.adviceIndex>=0?it.adviceIndex+base:null});
     }
-    const full=norm(transcript);const seen=new Set();const items=[];let dropped=0;const remap=new Map();
+    // ציטוט חייב להופיע בתוך שורה אחת של התמליל: דובר אחד, בלי לחבר קטעים.
+    const lines=transcript.split('\n').map(norm);const seen=new Set();const items=[];let dropped=0;const remap=new Map();
     all.forEach((it,n)=>{
-      const q=String(it.quote||'').trim();const k=it.type+'|'+norm(q);
-      if(!TYPES.includes(it.type)||norm(q).length<6||!full.includes(norm(q))||seen.has(k)){dropped++;return}
+      const q=String(it.quote||'').trim();const nq=norm(q);const k=it.type+'|'+nq;
+      const isQuestion=/\?\s*$/.test(q)&&['advice','principle','reasoning'].includes(it.type);
+      if(!TYPES.includes(it.type)||nq.length<6||isQuestion||!lines.some(l=>l.includes(nq))||seen.has(k)){dropped++;return}
       seen.add(k);remap.set(n,items.length);items.push({type:it.type,quote:q,summary:String(it.summary||'').trim().slice(0,140),adviceIndex:it.adviceIndex});
     });
     for(const it of items)it.adviceIndex=Number.isInteger(it.adviceIndex)&&remap.has(it.adviceIndex)?remap.get(it.adviceIndex):null;
