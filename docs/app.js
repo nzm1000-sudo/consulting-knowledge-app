@@ -730,7 +730,7 @@ function wxChart(hours){
   return`<svg class="wx-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="תחזית ל־12 השעות הקרובות"><defs><linearGradient id="wxa" x1="0" x2="0" y1="0" y2="1"><stop offset="0" style="stop-color:var(--accent);stop-opacity:.32"/><stop offset="1" style="stop-color:var(--accent);stop-opacity:0"/></linearGradient><linearGradient id="wxl" x1="0" x2="1"><stop offset="0" style="stop-color:var(--accent)"/><stop offset="1" style="stop-color:var(--accent-2)"/></linearGradient></defs>
     <path d="${area}" fill="url(#wxa)"/>${bars}<path d="${d}" class="wx-line"/>
     <circle cx="${X(0)}" cy="${Y(ts[0])}" r="3" class="wx-now"/>
-    <text x="${X(imx)}" y="${Y(mx)-4}" class="wx-ext">${Math.round(mx)}°</text>${imn!==imx?`<text x="${X(imn)}" y="${Y(mn)+11}" class="wx-ext">${Math.round(mn)}°</text>`:''}
+    <text x="${X(imx)}" y="${Y(mx)-4}" class="wx-ext">${Math.round(mx)}°</text>${imn!==imx?`<text x="${X(imn)}" y="${Y(mn)+11>H-18?Y(mn)-5:Y(mn)+11}" class="wx-ext">${Math.round(mn)}°</text>`:''}
     ${labels}</svg>`;
 }
 function weatherCard(){
@@ -1398,7 +1398,7 @@ function homeView(){
     <a href="#recordings"><strong>${data.meetings.length}</strong> הקלטות</a>
     <a href="#people"><strong>${allPeople().length}</strong> אנשים</a>
     <a href="#advice"><strong>${allAdvice().length}</strong> עצות מתועדות</a>
-    <a href="#followups"><strong>${open.length}</strong> מעקבים פתוחים${overdue?` · <span class="overdue">${overdue} באיחור</span>`:''}</a>
+    <a href="#followups"><strong>${open.length}</strong> מעקבים פתוחים${overdue?`<span class="stat-badge overdue">${overdue} באיחור</span>`:''}</a>
   </div>
   <div class="stack">
     <section>${sectionHead('דורש מעקב','followups','כל המעקבים')}
@@ -1480,19 +1480,24 @@ function knowledgePanel(m){
   const ks=an.knowledgeSource;
   const note=ks?`זוהה על ידי ${esc(ks.model)}, בינה מלאכותית שרצה אצלך במחשב. כל ציטוט נבדק מול התמליל${ks.dropped?`, ו־${cnt(ks.dropped,'ציטוט אחד שלא נמצא נזרק','ציטוטים שלא נמצאו נזרקו')}`:''}.`
     :'זוהה בכללים מקומיים. כל פריט נשלף מהתמלול ומקושר למשפט המקורי. „למה?” מציג את המשפט עצמו.';
+  const steps=[
+    ['הבעיה',an.problem?[an.problem]:[],{cat:'problem'}],
+    ['תצפיות',an.observations,{cat:'observe'}],
+    ['העצה',an.advice,{cls:'step-advice',cat:'advice'}],
+    ['הנימוק',an.reasoning,{cat:'reason'}],
+    ['התוצאה המצופה',an.outcomes,{cat:'outcome'}],
+    ['מה קרה בפועל',an.results,{cat:'result'}],
+    ['מעקב',an.followups,{cat:'follow'}],
+    ['חריגים',an.contradictions,{cat:'except'}],
+    ...(an.knowledgeSource?[['עקרונות שנוסחו',an.principles,{cat:'reason'}]]:[]),
+    ['מהלכי ייעוץ (מועמדים)',an.methodology,{cat:'reason'}]
+  ];
+  const full=steps.filter(([,items])=>items&&items.length),empty=steps.filter(([,items])=>!items||!items.length).map(([l])=>l);
+  const noSpeakers=!(an.speakers||[]).length&&empty.includes('מהלכי ייעוץ (מועמדים)');
+  // קבוצות ריקות לא תופסות שורה כל אחת: הן מרוכזות בשורה אחת בסוף.
+  const emptyLine=empty.length?`<p class="chain-empty"><strong>לא זוהו בהקלטה הזו:</strong> ${empty.map(esc).join(' · ')}${noSpeakers?'. מהלכי ייעוץ מזוהים רק כשהדוברים מסומנים בתמלול.':''}</p>`:'';
   return`<p class="section-note">${note}</p>
-  <div class="chain">
-    ${stepHtml('הבעיה',an.problem?[an.problem]:[],m.id,{cat:'problem',empty:'לא זוהה ניסוח מפורש של הבעיה'})}
-    ${stepHtml('תצפיות',an.observations,m.id,{cat:'observe',empty:'לא זוהו תצפיות'})}
-    ${stepHtml('העצה',an.advice,m.id,{cls:'step-advice',cat:'advice',empty:'לא זוהתה עצה או החלטה'})}
-    ${stepHtml('הנימוק',an.reasoning,m.id,{cat:'reason',empty:'לא זוהה נימוק מפורש'})}
-    ${stepHtml('התוצאה המצופה',an.outcomes,m.id,{cat:'outcome',empty:'לא נאמרה מטרה מפורשת'})}
-    ${stepHtml('מה קרה בפועל',an.results,m.id,{cat:'result',empty:'לא דווח על תוצאה של עצה קודמת'})}
-    ${stepHtml('מעקב',an.followups,m.id,{cat:'follow',empty:'לא נקבע מעקב'})}
-    ${stepHtml('חריגים',an.contradictions,m.id,{cat:'except',empty:'לא זוהה חריג'})}
-    ${an.knowledgeSource?stepHtml('עקרונות שנוסחו',an.principles,m.id,{cat:'reason',empty:'לא נוסח עיקרון כללי'}):''}
-    ${stepHtml('מהלכי ייעוץ (מועמדים)',an.methodology,m.id,{cat:'reason',empty:(an.speakers||[]).length?'לא זוהה מהלך':'בהקלטה הזו לא מסומנים דוברים, ולכן אי אפשר לזהות מהלכים'})}
-  </div>`;
+  <div class="chain">${full.map(([l,items,o])=>stepHtml(l,items,m.id,o)).join('')}</div>${full.length?'':`<div class="panel">${emptyState('לא חולץ ידע מההקלטה הזו','אפשר לעיין בתמלול המקור או בניתוח PLAUD.')}</div>`}${emptyLine}`;
 }
 function sourcePanel(m){
   const an=m.analysis||{};
@@ -1827,10 +1832,10 @@ function render(){
   el('desktop-nav').innerHTML=navHtml(active);
   el('mobile-nav').innerHTML=navHtml(active,true);
   let title,eyebrow;
-  if(r.key==='case'){const m=data.meetings.find(x=>x.id===r.param);title=m?m.title:'הקלטה';eyebrow=m?m.person+' · '+formatDate(m.date):''}
-  else if(r.key==='person'){title=r.param||'אדם';eyebrow='הזיכרון לפני הפגישה'}
-  else if(r.key==='file'){const c=caseById(r.param);title=c?c.title:'תיק';eyebrow='תיק'+(c?' · '+(c.people||[]).join(', '):'')}
-  else if(r.key==='principle'){const p=data.principles.find(x=>x.id===r.param);title=p?p.title:'עיקרון';eyebrow='עיקרון'}
+  if(r.key==='case'){const m=data.meetings.find(x=>x.id===r.param);title='הקלטות';eyebrow=m?m.person+' · '+formatDate(m.date):''}
+  else if(r.key==='person'){title='אנשים';eyebrow=(r.param?r.param+' · ':'')+'הזיכרון לפני הפגישה'}
+  else if(r.key==='file'){const c=caseById(r.param);title='תיקים';eyebrow=c?(c.people||[]).join(', '):''}
+  else if(r.key==='principle'){title='עקרונות';eyebrow='עיקרון'}
   else{const t=ROUTE_TITLES[r.key]();title=t.t;eyebrow=t.e}
   el('page-title').textContent=title;
   el('eyebrow').textContent=eyebrow;
