@@ -973,3 +973,15 @@ html,body{overflow-x:clip}
 .kitem-sum,.tip-sum{margin:0 0 6px;font-size:15.5px;font-weight:600;line-height:1.5;color:var(--ink)}
 .kitem-text.is-quote,.tip-text.is-quote{font-size:14px;font-weight:400;color:var(--ink-2);border-inline-start:2px solid var(--line);padding-inline-start:10px}
 .tag-ai{background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent-ink);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)}
+
+/* nas-design-fixes · קבוצות ריקות, תפריט, כרטיסים */
+.chain-empty{margin:14px 0 0;padding:12px 14px;border:1px dashed var(--line);border-radius:var(--r);font-size:13px;line-height:1.7;color:var(--muted)}
+.chain-empty strong{color:var(--ink-2);font-weight:600}
+/* תפריט הצד: אותו רווח מעל כל כותרת קבוצה */
+#desktop-nav .nav-group+.nav-group{margin-top:16px}
+/* "באיחור" בתגית בפינה: כל כרטיסי המספרים באותו גובה */
+.stat-strip a .stat-badge{position:absolute;top:10px;inset-inline-end:12px;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--alert) 12%,transparent)}
+/* כרטיסי עקרונות: שתי עמודות שוות, וכרטיס אחרון בודד נפרש על כל השורה */
+.principle-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.principle-grid>:last-child:nth-child(odd){grid-column:1/-1}
+@media (max-width:640px){.principle-grid{grid-template-columns:minmax(0,1fr)}}
