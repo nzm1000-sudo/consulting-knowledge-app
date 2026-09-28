@@ -154,11 +154,12 @@ let pendingJump=null;
 function persistNav(){ssSet('consultingNav',navState)}
 
 /* ---------- ניתוח מקומי (כללים, פונקציה טהורה) ---------- */
-const ANALYSIS_VERSION=6;
+const ANALYSIS_VERSION=7;
 const ENGINE_LABEL='כללים מקומיים';
 const H={
   contradiction:/(שונה מכלל|חריג|לעומת זאת|לא תמיד|בתנאים מסוימים|יוצא מן הכלל)/,
-  advice:/(המלצתי|המלצנו|הצעתי|אני מציע(ה)?|אני ממליץ(ה)?|מומלץ|כדאי|מוטב|צריך(ה)? (ש|ל)|נראה לי (שת|שכדאי))/,
+  // עצה = המלצה מפורשת או פנייה ישירה לאדם. "כדאי" או "צריך ל" לבדם אינם עצה: בשיחה אמיתית הם מופיעים בכל משפט.
+  advice:/(המלצתי|המלצנו|הצעתי|אני מציע(ה)?|אני ממליץ(ה)?|הייתי ממליץ(ה)?|הייתי מציע(ה)?|ממליץ לך|מציע לך|העצה שלי|כדאי (לך|לכם|לכן|לו|לה|שת|שתנסה|שתנסי)|מומלץ (לך|לכם|ש)|מוטב (לך|ש)|(אתה|את|אתם) צריכ(ה|ים)? ל|צריך שת|חשוב שת|נראה לי (שת|שכדאי)|תשתדל(י|ו)?(?=[\s,.!]|$)|תקפיד(י|ו)?(?=[\s,.!]|$))/,
   decision:/(הוחלט|החלטנו|סיכמנו|הסכמנו)/,
   followup:/(בפגישה הבאה|בפגישה העתידה|נבדוק|לבדוק|מעקב|נחזור (על|ל)?זה|נחזור לזה)/,
   result:/(^|[\s,])(עבד|עבדה|עבדו|הצליח|הצליחה|הצליחו|לא הצליח|השתפר|השתפרה|השתפרו|יישם|יישמה|יישמו|עזר|עזרה|לא עזר|כיבד|כיבדה|כיבדו|חיזק|חיזקה)(?=[\s.,!?]|$)/,
@@ -167,6 +168,10 @@ const H={
   problem:/(הקושי|הבעיה|מתקש|ויכוח|מריב|קונפליקט|מסלימ|פחד|חושש|שוקל|מתלבט|נתקע|סובל|לחץ)/,
   observation:/(תיאר|דיווח|סיפר|שיתף|שיתפה|הרגיש|שמתי לב|הבנתי ש|ניכר ש)/
 };
+// פנייה ישירה בציווי (עתיד גוף שני). "תגיד לי" או "תשמע" אינם עצה.
+const IMPERATIVE=new RegExp('(^|[\\s,])(ו)?('+['תגיד','תסביר','תבקש','תנסה','תעשה','תלך','תדבר','תכתוב','תיקח','תפנה','תחשוב','תבדוק','תתחיל','תפסיק','תחכה','תוותר','תתמקד','תשים לב','אל תמהר','אל תיקח','אל תוותר','אל תיכנס','אל תילחם']
+  .flatMap(w=>{const f=w.endsWith('ה')?w.slice(0,-1)+'י':w+'י';const pl=w.endsWith('ה')?w.slice(0,-1)+'ו':w+'ו';return[w,f,pl]}).map(w=>w.replace(/ /g,'\\s')).join('|')+')(?=[\\s,.!]|$)(?!\\s(לי|לנו)(?=[\\s,.!?]|$))');
+const isAdviceText=t=>(H.advice.test(t)||IMPERATIVE.test(t))&&t.split(/\s+/).length>=4;
 const LABEL_WORDS=new Set(['מטרה','סיכום','תאריך','זמן','נושא','שם','עמודה','סוג','מקור','המלצה','משימה','תוצאה','חריג','החלטה','מעקב']);
 function splitSegments(transcript){
   const out=[];
@@ -234,13 +239,23 @@ function analyzeTranscript(text){
     items.push({id:type+'-'+i,type,text:seg.text,kind,confidence,evidence:{quote:seg.text,time:seg.time,speaker:seg.speaker,seg:i}});
   };
   // כשהיועץ מסומן בתמליל, עצה והחלטה נספרות רק ממה שהוא אמר. "כדאי" או "צריך ל" בפי הלקוח אינם עצה.
-  const hasConsultant=segments.some(s=>s.speaker&&CONSULTANT_RE.test(s.speaker));
+  let consultant=segments.find(s=>s.speaker&&CONSULTANT_RE.test(s.speaker))?.speaker||null,consultantInferred=false;
+  // בלי תווית יועץ (Speaker 1, Speaker 2): היועץ הוא הדובר שנותן הכי הרבה עצות מפורשות, אם הפער ברור.
+  if(!consultant){
+    const hits=new Map();
+    for(const sg of segments)if(sg.speaker&&!/\?\s*$/.test(sg.text)&&isAdviceText(sg.text))hits.set(sg.speaker,(hits.get(sg.speaker)||0)+1);
+    const [a,b]=[...hits].sort((x,y)=>y[1]-x[1]);
+    if(a&&a[1]>=2&&(!b||a[1]>=b[1]*2)){consultant=a[0];consultantInferred=true}
+  }
+  const isCons=sp=>!!sp&&(CONSULTANT_RE.test(sp)||sp===consultant);
+  const hasConsultant=!!consultant;
+  const seenAdvice=new Set(),normAdv=t=>t.replace(/[^\u0590-\u05FFa-z0-9]+/gi,' ').trim();
   segments.forEach((seg,i)=>{
     const t=seg.text;
     const question=/\?\s*$/.test(t);
-    const fromClient=hasConsultant&&!!seg.speaker&&!CONSULTANT_RE.test(seg.speaker);
+    const fromClient=hasConsultant&&!!seg.speaker&&!isCons(seg.speaker);
     if(H.contradiction.test(t))push('contradiction',seg,i,'inferred',60);
-    else if(!question&&!fromClient&&H.advice.test(t))push('advice',seg,i,'explicit',84);
+    else if(!question&&!fromClient&&isAdviceText(t)&&!seenAdvice.has(normAdv(t))){seenAdvice.add(normAdv(t));push('advice',seg,i,'explicit',consultantInferred?70:84)}
     else if(!fromClient&&H.decision.test(t))push('decision',seg,i,'explicit',80);
     else if(H.followup.test(t))push('followup',seg,i,'explicit',78);
     else if(!question&&H.result.test(t))push('result',seg,i,'explicit',72);
@@ -266,6 +281,7 @@ function analyzeTranscript(text){
     version:ANALYSIS_VERSION,
     segments,
     speakers:[...new Set(segments.map(s=>s.speaker).filter(Boolean))],
+    consultant:consultant?{label:consultant,inferred:consultantInferred}:null,
     problem:problems[0]||null,
     observations:problems.slice(1).concat(by('observation')).slice(0,6),
     reasoning:by('reasoning'),
@@ -313,6 +329,7 @@ function reasonFor(an,adv){
   let best=null,bd=Infinity;
   for(const r of rs){
     if(r.forAdvice||typeof r.evidence?.seg!=='number')continue;
+    if(adv.evidence.speaker&&r.evidence.speaker&&adv.evidence.speaker!==r.evidence.speaker)continue; // נימוק של הלקוח אינו הנימוק לעצה
     const d=r.evidence.seg-at,dist=d>0?d:-d+.5; // עדיפות לנימוק שנאמר אחרי העצה
     if(d!==0&&Math.abs(d)<=REASON_WINDOW&&dist<bd){best=r;bd=dist}
   }
@@ -2277,7 +2294,7 @@ function normalizeSnapshot(j,prev){
   for(const r of j.recordings){
     const id=str(r.id),person=str(r.person),date=str(r.date).slice(0,10),transcript=typeof r.transcript==='string'?r.transcript:'';
     if(!id||!person||!DAY_RE.test(date)||!transcript.trim())continue;
-    const m={id,person,date,title:str(r.title)||'הקלטה מ־'+formatDate(date),summary:str(r.summary),transcript,tags:Array.isArray(r.tags)?r.tags.filter(t=>typeof t==='string'):[],source:'server'};
+    const m={id,person,date,title:str(r.title)||'הקלטה מ־'+formatDate(date),summary:str(r.summary),transcript,tags:Array.isArray(r.tags)?r.tags.filter(t=>typeof t==='string'):[],plaud:typeof r.plaud==='string'?r.plaud:'',source:'server'};
     const old=prevM.get(id);
     // אותו תמליל, אותה גרסת ניתוח: לא מנתחים מחדש.
     if(old&&old.transcript===transcript&&old.analysis&&old.analysis.version===ANALYSIS_VERSION)m.analysis=old.analysis;

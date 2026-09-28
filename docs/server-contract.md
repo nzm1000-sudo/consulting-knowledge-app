@@ -33,6 +33,7 @@ Response `200`, `Content-Type: application/json`:
       "title": "string, optional",
       "summary": "string, optional",
       "transcript": "string, required, the text the site analyzes",
+      "plaud": "string, optional, PLAUD's own summary or notes for the recording (shown in the \"ניתוח PLAUD\" tab)",
       "tags": ["optional", "strings"]
     }
   ],

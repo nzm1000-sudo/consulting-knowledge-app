@@ -74,7 +74,7 @@ assert.equal(data.followups.length,6,'seed followups');
 assert.equal(data.meetings[0].id,'m1');
 
 // 2. analysis (v3) applied to all meetings, with evidence integrity
-for(const m of data.meetings)assert(m.analysis&&m.analysis.version===6&&m.analysis.segments.length>0,'analysis for '+m.id);
+for(const m of data.meetings)assert(m.analysis&&m.analysis.version===7&&m.analysis.segments.length>0,'analysis for '+m.id);
 const byId=id=>data.meetings.find(m=>m.id===id).analysis;
 const a1=byId('m1');
 assert(a1.problem&&a1.problem.text.includes('הקושי'),'m1 problem');
@@ -457,7 +457,24 @@ assert(a.answer[0].includes('לא זוהו מהלכי ייעוץ'),'no moves in 
   assert.equal(an.advice.length,1,'client "צריך ל" is not advice');
   assert(an.advice[0].evidence.speaker==='הרב');
   const un=app.analyzeTranscript('Speaker 1: כדאי לך לקבוע שעה קבועה לשיחה.\nSpeaker 2: אני חושבת שצריך לעשות את זה אחרת.');
-  assert.equal(un.advice.length,2,'without a consultant label nothing is filtered');
+  assert.equal(un.advice.length,1,'"צריך לעשות" in the first person is not advice');
+}
+
+// 18. stricter advice, inferred consultant, same-speaker reasons, PLAUD summary
+{
+  const t=['Speaker 1: אני חושבת שצריך לעשות את זה אחרת.','Speaker 2: כדאי לך לדבר איתו לפני שאת מחליטה.',
+    'Speaker 2: בגלל שאם תחכי זה רק יחמיר.','Speaker 1: כדאי לי לחשוב על זה עוד קצת.','Speaker 2: תגיד לי, מתי זה התחיל?',
+    'Speaker 2: אל תמהר להילחם איתם בשבוע הראשון.','Speaker 1: בגלל שאני פוחדת מהתגובה שלו.','Speaker 2: תנסה לכתוב לו מכתב קצר.'].join('\n');
+  const an=app.analyzeTranscript(t);
+  assert.deepEqual(an.consultant,{label:'Speaker 2',inferred:true},'consultant inferred from explicit advice');
+  const texts=an.advice.map(a=>a.text);
+  assert(texts.some(x=>x.startsWith('כדאי לך'))&&texts.some(x=>x.startsWith('אל תמהר'))&&texts.some(x=>x.startsWith('תנסה')),'direct advice kept');
+  assert(!texts.some(x=>x.includes('כדאי לי'))&&!texts.some(x=>x.includes('תגיד לי'))&&!texts.some(x=>x.includes('צריך לעשות')),'noise dropped');
+  assert(an.advice.every(a=>a.evidence.speaker==='Speaker 2'),'advice only from the consultant');
+  const r=sandbox.window.__consulting.reasonFor;
+  for(const a of an.advice){const why=r(an,a);if(why)assert.equal(why.evidence.speaker,'Speaker 2','reason from the same speaker')}
+  const snap=app.normalizeSnapshot({contract:'nitzotza.snapshot.v1',recordings:[{id:'p1',person:'x',date:'2026-09-01',transcript:'שלום רב.',plaud:'סיכום של PLAUD'}]},null);
+  assert.equal(snap.meetings[0].plaud,'סיכום של PLAUD','PLAUD summary carried from the snapshot');
 }
 
 console.log('ALL SMOKE TESTS PASSED');
